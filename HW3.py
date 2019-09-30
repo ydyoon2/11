@@ -214,8 +214,8 @@ for epoch in range(start_epoch, opt.epochs + start_epoch):
             'net': net,
             'epoch': epoch,
         }
-        if not os.path.isdir('checkpoint'):
-            os.mkdir('checkpoint')
-        torch.save(state, '../checkpoint/ckpt.t7')
+#        if not os.path.isdir('checkpoint'):
+#            os.mkdir('checkpoint')
+#        torch.save(state, '../checkpoint/ckpt.t7')
 
 print('==> Finished Training ...')
