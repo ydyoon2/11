@@ -84,7 +84,7 @@ parser = argparse.ArgumentParser()
 
 
 parser.add_argument('--dataroot', type=str, default="/data", help='path to dataset')
-parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
+parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--wd', type=float, default=5e-4, help='weight decay')
 parser.add_argument('--epochs', type=int, default=30, help='number of epochs to train')
 parser.add_argument('--batch_size_train', type=int, default=128, help='training set input batch size')
