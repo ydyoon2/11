@@ -94,8 +94,6 @@ parser = argparse.ArgumentParser()
 # directory
 parser.add_argument('--dataroot', type=str,
                     default="/data", help='path to dataset')
-parser.add_argument('--ckptroot', type=str,
-                    default="/checkpoint/ckpt.t7", help='path to checkpoint')
 
 # hyperparameters settings
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
@@ -119,18 +117,8 @@ opt = parser.parse_args()
 start_epoch = 0
 
 # resume training from the last time
-if opt.resume:
-    # Load checkpoint
-    print('==> Resuming from checkpoint ...')
-    assert os.path.isdir(
-        '/checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load(opt.ckptroot)
-    net = checkpoint['net']
-    start_epoch = checkpoint['epoch']
-else:
-    # start over
-    print('==> Building new CNN model ...')
-    net = CNN()
+
+net = CNN()
 
 
 # For training on GPU, we need to transfer net and data onto the GPU
@@ -225,8 +213,5 @@ for epoch in range(start_epoch, opt.epochs + start_epoch):
             'net': net.module if opt.is_gpu else net,
             'epoch': epoch,
         }
-        if not os.path.isdir('checkpoint'):
-            os.mkdir('checkpoint')
-        torch.save(state, '/checkpoint/ckpt.t7')
 
 print('==> Finished Training ...')
