@@ -76,30 +76,13 @@ class CNN(nn.Module):
         x = self.fc_layer(x)
         return x
     
-parser = argparse.ArgumentParser()
-
-parser.add_argument('--dataroot', type=str, default="/data", help='path to dataset')
-parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
-parser.add_argument('--wd', type=float, default=0.0005, help='weight decay')
-parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train')
-parser.add_argument('--batch_size_train', type=int, default=128, help='training set input batch size')
-parser.add_argument('--batch_size_test', type=int, default=64, help='test set input batch size')
-parser.add_argument('--resume', type=bool, default=False, help='whether training from ckpt')
-parser.add_argument('--is_gpu', type=bool, default=True, help='whether training using GPU')
-
-args = parser.parse_args()
-
-start_epoch = 0
 net = CNN().cuda()
-#net = net.cuda()
-#net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
-#cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=args.lr, weight_decay=args.wd)
+optimizer = optim.Adam(net.parameters(), lr=0.0001, weight_decay=0.0005)
 
 def calculate_accuracy(loader):
-    correct = 0.
-    total = 0.
+    correct = 0
+    total = 0
 
     for data in loader:
         images, labels = data
@@ -113,7 +96,7 @@ def calculate_accuracy(loader):
 
     return 100 * correct / total
 
-for epoch in range(start_epoch, args.epochs + start_epoch):
+for epoch in range(20):
 
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
