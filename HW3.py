@@ -41,33 +41,33 @@ class CNN(nn.Module):
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout2d(p=0.1),
+            nn.Dropout2d(p=0.5),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
             nn.BatchNorm2d(num_features=64),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout2d(p=0.1),
+            nn.Dropout2d(p=0.5),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
             nn.BatchNorm2d(num_features=64),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
-            nn.Dropout2d(p=0.1),
+            nn.Dropout2d(p=0.5),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
             nn.BatchNorm2d(num_features=64),
-            nn.Dropout2d(p=0.1),
+            nn.Dropout2d(p=0.5),
             nn.ReLU(inplace=True)
         )
 
         self.fc_layer = nn.Sequential(
-            nn.Dropout(p=0.1),
+            #nn.Dropout(p=0.5),
             nn.Linear(1024, 512),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.1),
+            #nn.Dropout(p=0.5),
             nn.Linear(512, 10)
         )
 
