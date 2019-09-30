@@ -123,7 +123,7 @@ if opt.resume:
     # Load checkpoint
     print('==> Resuming from checkpoint ...')
     assert os.path.isdir(
-        '../checkpoint'), 'Error: no checkpoint directory found!'
+        '/checkpoint'), 'Error: no checkpoint directory found!'
     checkpoint = torch.load(opt.ckptroot)
     net = checkpoint['net']
     start_epoch = checkpoint['epoch']
@@ -227,6 +227,6 @@ for epoch in range(start_epoch, opt.epochs + start_epoch):
         }
         if not os.path.isdir('checkpoint'):
             os.mkdir('checkpoint')
-        torch.save(state, '../checkpoint/ckpt.t7')
+        torch.save(state, '/checkpoint/ckpt.t7')
 
 print('==> Finished Training ...')
