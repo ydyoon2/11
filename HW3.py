@@ -36,27 +36,32 @@ class CNN(nn.Module):
 
         self.conv_layer = nn.Sequential(
 
-            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(num_features=32),
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=4, stride=1, padding=2),
+            nn.BatchNorm2d(num_features=64),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(num_features=128),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Dropout2d(p=0.05),
-
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
+            nn.BatchNorm2d(num_features=64),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout2d(p=0.05),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
+            nn.BatchNorm2d(num_features=64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
+            nn.Dropout2d(p=0.05),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
+            nn.BatchNorm2d(num_features=64),
+            nn.Dropout2d(p=0.05),
+            nn.ReLU(inplace=True)
         )
 
         self.fc_layer = nn.Sequential(
