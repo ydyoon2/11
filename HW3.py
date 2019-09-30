@@ -12,15 +12,17 @@ import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
-import os
-import os.path
 import argparse
 from torch.autograd import Variable
 
 #data augmentation
-transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4),transforms.RandomHorizontalFlip(),
-                                      transforms.ToTensor(), transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
-transform_test = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
+transform_train = transforms.Compose([transforms.RandomResizedCrop(224),
+                                      #transforms.RandomCrop(size=32, padding=4),
+                                      transforms.RandomHorizontalFlip(),
+                                      transforms.ToTensor(), 
+                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
+transform_test = transforms.Compose([transforms.ToTensor(),
+                                     transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 
 trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
 testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_test)
@@ -35,24 +37,21 @@ class CNN(nn.Module):
 
         self.conv_layer = nn.Sequential(
 
-            # Conv Layer block 1
             nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
+            nn.BatchNorm2d(num_features=32),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
 
-            # Conv Layer block 2
             nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
+            nn.BatchNorm2d(num_features=128),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Dropout2d(p=0.05),
 
-            # Conv Layer block 3
             nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
@@ -81,7 +80,6 @@ class CNN(nn.Module):
         return x
     
 parser = argparse.ArgumentParser()
-
 
 parser.add_argument('--dataroot', type=str, default="/data", help='path to dataset')
 parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
