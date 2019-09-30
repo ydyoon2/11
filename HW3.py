@@ -16,8 +16,7 @@ import argparse
 from torch.autograd import Variable
 
 #data augmentation
-transform_train = transforms.Compose([transforms.RandomResizedCrop(32),
-                                      #transforms.RandomCrop(size=32, padding=4),
+transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
                                       transforms.RandomHorizontalFlip(),
                                       transforms.ToTensor(), 
                                       transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
