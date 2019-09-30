@@ -1,29 +1,25 @@
 """
 HW3: Train a deep convolution network on a GPU with PyTorch for the CIFAR10 dataset. 
 The convolution network should use (A) dropout, (B) trained with RMSprop or ADAM, and (C) data augmentation. 
-For 10% extra credit, compare dropout test accuracy (i) using the heuristic prediction rule and (ii) Monte Carlo simulation. 
 For full credit, the model should achieve 80-90% Test Accuracy. Submit via Compass (1) the code and 
 (2) a paragraph (in a PDF document) which reports the results and briefly describes the model architecture. 
-Due September 27 at 5:00 PM.
 """
 
 import torch 
 import torchvision 
 import torch.utils.data 
 import torchvision.transforms as transforms
-
 import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
-
 import os
 import os.path
 import argparse
-
 from torch.autograd import Variable
 
 #data augmentation
-transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4),transforms.RandomHorizontalFlip(),transforms.ToTensor(), transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
+transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4),transforms.RandomHorizontalFlip(),
+                                      transforms.ToTensor(), transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 transform_test = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 
 trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
@@ -31,6 +27,7 @@ testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=True, num_workers=4)
 testloader = torch.utils.data.DataLoader(testset, batch_size=32, shuffle=False, num_workers=4)
 
+#CNN
 class CNN(nn.Module):
     def __init__(self):
         """CNN Builder."""
@@ -76,17 +73,12 @@ class CNN(nn.Module):
 
 
     def forward(self, x):
-        """Perform forward."""
-
         # conv layers
         x = self.conv_layer(x)
-
         # flatten
         x = x.view(x.size(0), -1)
-
         # fc layer
         x = self.fc_layer(x)
-
         return x
     
 parser = argparse.ArgumentParser()
@@ -94,6 +86,8 @@ parser = argparse.ArgumentParser()
 # directory
 parser.add_argument('--dataroot', type=str,
                     default="/data", help='path to dataset')
+#parser.add_argument('--ckptroot', type=str,
+#                    default="../checkpoint/ckpt.t7", help='path to checkpoint')
 
 # hyperparameters settings
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
@@ -117,17 +111,24 @@ opt = parser.parse_args()
 start_epoch = 0
 
 # resume training from the last time
-
+#if opt.resume:
+#    # Load checkpoint
+#    print('==> Resuming from checkpoint ...')
+#    assert os.path.isdir(
+#        '../checkpoint'), 'Error: no checkpoint directory found!'
+#    checkpoint = torch.load(opt.ckptroot)
+#    net = checkpoint['net']
+#    start_epoch = checkpoint['epoch']
+#else:
+#    # start over
+#    print('==> Building new CNN model ...')
 net = CNN()
 
 
-# For training on GPU, we need to transfer net and data onto the GPU
-# http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
-if opt.is_gpu:
-    net = net.cuda()
-    net = torch.nn.DataParallel(
-        net, device_ids=range(torch.cuda.device_count()))
-    cudnn.benchmark = True
+#if opt.is_gpu:
+net = net.cuda()
+net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
+cudnn.benchmark = True
 
 
 # Loss function and optimizer
@@ -135,7 +136,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=opt.lr, weight_decay=opt.wd)
 
 
-def calculate_accuracy(loader, is_gpu):
+def calculate_accuracy(loader):
     """Calculate accuracy.
 
     Args:
@@ -149,9 +150,9 @@ def calculate_accuracy(loader, is_gpu):
 
     for data in loader:
         images, labels = data
-        if is_gpu:
-            images = images.cuda()
-            labels = labels.cuda()
+#        if is_gpu:
+        images = images.cuda()
+        labels = labels.cuda()
         outputs = net(Variable(images))
         _, predicted = torch.max(outputs.data, 1)
 
@@ -170,9 +171,9 @@ for epoch in range(start_epoch, opt.epochs + start_epoch):
         # get the inputs
         inputs, labels = data
 
-        if opt.is_gpu:
-            inputs = inputs.cuda()
-            labels = labels.cuda()
+#        if opt.is_gpu:
+        inputs = inputs.cuda()
+        labels = labels.cuda()
 
         # wrap them in Variable
         inputs, labels = Variable(inputs), Variable(labels)
@@ -194,14 +195,14 @@ for epoch in range(start_epoch, opt.epochs + start_epoch):
         optimizer.step()
 
         # print statistics
-        running_loss += loss.data[0]
+        running_loss += loss.data
 
     # Normalizing the loss by the total number of train batches
     running_loss /= len(trainloader)
 
     # Calculate training/test set accuracy of the existing model
-    train_accuracy = calculate_accuracy(trainloader, opt.is_gpu)
-    test_accuracy = calculate_accuracy(testloader, opt.is_gpu)
+    train_accuracy = calculate_accuracy(trainloader)
+    test_accuracy = calculate_accuracy(testloader)
 
     print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(
         epoch+1, running_loss, train_accuracy, test_accuracy))
@@ -210,8 +211,11 @@ for epoch in range(start_epoch, opt.epochs + start_epoch):
     if epoch % 50 == 0:
         print('==> Saving model ...')
         state = {
-            'net': net.module if opt.is_gpu else net,
+            'net': net,
             'epoch': epoch,
         }
+        if not os.path.isdir('checkpoint'):
+            os.mkdir('checkpoint')
+        torch.save(state, '../checkpoint/ckpt.t7')
 
 print('==> Finished Training ...')
