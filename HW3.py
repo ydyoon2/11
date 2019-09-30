@@ -95,7 +95,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dataroot', type=str,
                     default="/data", help='path to dataset')
 parser.add_argument('--ckptroot', type=str,
-                    default="../checkpoint/ckpt.t7", help='path to checkpoint')
+                    default="/checkpoint/ckpt.t7", help='path to checkpoint')
 
 # hyperparameters settings
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
