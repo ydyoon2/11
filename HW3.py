@@ -63,9 +63,9 @@ class CNN(nn.Module):
 
         self.fc_layer = nn.Sequential(
                 nn.Dropout(p=0.1),
-                nn.Linear(1024, 500),
+                nn.Linear(1024, 512),
                 nn.ReLU(inplace=True),
-                nn.Linear(500, 10)
+                nn.Linear(512, 10)
                 )
 
     def forward(self, x):
@@ -74,11 +74,8 @@ class CNN(nn.Module):
         x = self.fc_layer(x)
         return x
     
-#GPU
 net = CNN().cuda()
-#nn.CrossEntropyLoss() combines nn.LogSoftmax() and nn.NLLLoss() in one single class
 criterion = nn.CrossEntropyLoss()
-##ADAM
 optimizer = optim.Adam(net.parameters(), lr=0.0001, weight_decay=0.0005)
 
 def calculate_accuracy(loader):
@@ -99,7 +96,7 @@ def calculate_accuracy(loader):
 
 for epoch in range(20):
 
-    running_loss = 0
+    running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
         # get the inputs
         inputs, labels = data
