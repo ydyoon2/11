@@ -135,4 +135,4 @@ for epoch in range(20):
     train_accuracy = accuracy(trainloader)
     test_accuracy = accuracy(testloader)
 
-    print("Iteration: ", epoch+1, "train_accuracy: ", train_accuracy, "test_accuracy: ", test_accuracy)
+    print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(epoch+1, running_loss, train_accuracy, test_accuracy))
