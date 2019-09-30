@@ -7,11 +7,11 @@ For full credit, the model should achieve 80-90% Test Accuracy. Submit via Compa
 
 import torch 
 import torchvision 
-import torch.utils.data 
-import torchvision.transforms as transforms
 import torch.nn as nn
+import torch.utils.data 
 import torch.optim as optim
 from torch.autograd import Variable
+import torchvision.transforms as transforms
 
 #data augmentation
 transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
@@ -29,7 +29,6 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=32, shuffle=False, 
 #dropout
 class CNN(nn.Module):
     def __init__(self):
-        """CNN Builder."""
         super(CNN, self).__init__()
 
         self.conv_layer = nn.Sequential(
@@ -73,15 +72,17 @@ class CNN(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc_layer(x)
         return x
-    
+
+#GPU
 net = CNN().cuda()
+#CrossEntropyLoss() combines nn.LogSoftmax() and nn.NLLLoss()
 criterion = nn.CrossEntropyLoss()
+#Adam optimizer
 optimizer = optim.Adam(net.parameters(), lr=0.0001, weight_decay=0.0005)
 
 def calculate_accuracy(loader):
     correct = 0
     total = 0
-
     for data in loader:
         images, labels = data
         images = images.cuda()
@@ -118,8 +119,8 @@ for epoch in range(20):
             for group in optimizer.param_groups:
                 for p in group['params']:
                     state = optimizer.state[p]
-                    if state['step'] >= 1024:
-                        state['step'] = 1000
+#                    if state['step'] >= 1024:
+#                        state['step'] = 1000
         optimizer.step()
 
         # print statistics
