@@ -191,7 +191,7 @@ for epoch in range(start_epoch, opt.epochs + start_epoch):
                     state = optimizer.state[p]
                     if state['step'] >= 1024:
                         state['step'] = 1000
-        optimizer.step()
+        #optimizer.step()
 
         # print statistics
         running_loss += loss.data[0]
