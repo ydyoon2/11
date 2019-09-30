@@ -90,9 +90,9 @@ parser.add_argument('--dataroot', type=str,
 #                    default="../checkpoint/ckpt.t7", help='path to checkpoint')
 
 # hyperparameters settings
-parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+parser.add_argument('--lr', type=float, default=0.005, help='learning rate')
 parser.add_argument('--wd', type=float, default=5e-4, help='weight decay')
-parser.add_argument('--epochs', type=int, default=50,
+parser.add_argument('--epochs', type=int, default=30,
                     help='number of epochs to train')
 parser.add_argument('--batch_size_train', type=int,
                     default=128, help='training set input batch size')
