@@ -11,8 +11,6 @@ import torch.utils.data
 import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.optim as optim
-import torch.backends.cudnn as cudnn
-import argparse
 from torch.autograd import Variable
 
 #data augmentation
@@ -31,9 +29,7 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=32, shuffle=False, 
 #dropout
 class CNN(nn.Module):
     def __init__(self):
-        """CNN Builder."""
         super(CNN, self).__init__()
-
         self.conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels=3, out_channels=64, kernel_size=4, stride=1, padding=2),
                 nn.BatchNorm2d(num_features=64),
@@ -65,9 +61,9 @@ class CNN(nn.Module):
 
         self.fc_layer = nn.Sequential(
                 nn.Dropout(p=0.1),
-                nn.Linear(1024, 512),
+                nn.Linear(1024, 500),
                 nn.ReLU(inplace=True),
-                nn.Linear(512, 10)
+                nn.Linear(500, 10)
                 )
 
     def forward(self, x):
@@ -76,11 +72,14 @@ class CNN(nn.Module):
         x = self.fc_layer(x)
         return x
     
+#GPU
 net = CNN().cuda()
+#CrossEntropyLoss = nn.LogSoftmax() + nn.NLLLoss()
 criterion = nn.CrossEntropyLoss()
+#ADAM
 optimizer = optim.Adam(net.parameters(), lr=0.0001, weight_decay=0.0005)
 
-def calculate_accuracy(loader):
+def accuracy(loader):
     correct = 0
     total = 0
 
@@ -94,11 +93,11 @@ def calculate_accuracy(loader):
         total += labels.size(0)
         correct += (predicted == labels).sum()
 
-    return 100 * correct / total
+    return correct / total
 
 for epoch in range(20):
 
-    running_loss = 0.0
+    running_loss = 0
     for i, data in enumerate(trainloader, 0):
         # get the inputs
         inputs, labels = data
@@ -131,7 +130,7 @@ for epoch in range(20):
     running_loss /= len(trainloader)
 
     # Calculate training/test set accuracy of the existing model
-    train_accuracy = calculate_accuracy(trainloader)
-    test_accuracy = calculate_accuracy(testloader)
+    train_accuracy = accuracy(trainloader)
+    test_accuracy = accuracy(testloader)
 
-    print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(epoch+1, running_loss, train_accuracy, test_accuracy))
+    print("Iteration: {0}, Training accuracy: {1}, Test accuracy: {2}".format(epoch+1, train_accuracy, test_accuracy))
