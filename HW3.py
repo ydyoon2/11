@@ -186,7 +186,7 @@ for epoch in range(start_epoch, opt.epochs + start_epoch):
         loss = criterion(outputs, labels)
         loss.backward()
 
-        if epoch > 16:
+        if epoch > 3:
             for group in optimizer.param_groups:
                 for p in group['params']:
                     state = optimizer.state[p]
@@ -207,15 +207,15 @@ for epoch in range(start_epoch, opt.epochs + start_epoch):
     print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(
         epoch+1, running_loss, train_accuracy, test_accuracy))
 
-    # save model
-    if epoch % 50 == 0:
-        print('==> Saving model ...')
-        state = {
-            'net': net,
-            'epoch': epoch,
-        }
-#        if not os.path.isdir('checkpoint'):
-#            os.mkdir('checkpoint')
-#        torch.save(state, '../checkpoint/ckpt.t7')
-
-print('==> Finished Training ...')
+#    # save model
+#    if epoch % 50 == 0:
+#        print('==> Saving model ...')
+#        state = {
+#            'net': net,
+#            'epoch': epoch,
+#        }
+##        if not os.path.isdir('checkpoint'):
+##            os.mkdir('checkpoint')
+##        torch.save(state, '../checkpoint/ckpt.t7')
+#
+#print('==> Finished Training ...')
