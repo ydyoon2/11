@@ -29,7 +29,9 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=32, shuffle=False, 
 #dropout
 class CNN(nn.Module):
     def __init__(self):
+        """CNN Builder."""
         super(CNN, self).__init__()
+
         self.conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels=3, out_channels=64, kernel_size=4, stride=1, padding=2),
                 nn.BatchNorm2d(num_features=64),
@@ -72,14 +74,12 @@ class CNN(nn.Module):
         x = self.fc_layer(x)
         return x
     
-#GPU
-net = CNN().cuda()
-#CrossEntropyLoss = nn.LogSoftmax() + nn.NLLLoss()
-criterion = nn.CrossEntropyLoss()
 #ADAM
+net = CNN().cuda()
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=0.0001, weight_decay=0.0005)
 
-def accuracy(loader):
+def calculate_accuracy(loader):
     correct = 0
     total = 0
 
@@ -130,7 +130,7 @@ for epoch in range(20):
     running_loss /= len(trainloader)
 
     # Calculate training/test set accuracy of the existing model
-    train_accuracy = accuracy(trainloader)
-    test_accuracy = accuracy(testloader)
+    train_accuracy = calculate_accuracy(trainloader)
+    test_accuracy = calculate_accuracy(testloader)
 
     print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(epoch+1, running_loss, train_accuracy, test_accuracy))
