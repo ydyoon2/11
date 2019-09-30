@@ -35,39 +35,40 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
 
         self.conv_layer = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=4, stride=1, padding=2),
-            nn.BatchNorm2d(num_features=64),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout2d(p=0.1),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
-            nn.BatchNorm2d(num_features=64),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout2d(p=0.1),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
-            nn.BatchNorm2d(num_features=64),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
-            nn.Dropout2d(p=0.1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
-            nn.BatchNorm2d(num_features=64),
-            nn.Dropout2d(p=0.1),
-            nn.ReLU(inplace=True)
-        )
+                nn.Conv2d(in_channels=3, out_channels=64, kernel_size=4, stride=1, padding=2),
+                nn.BatchNorm2d(num_features=64),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
+                nn.ReLU(inplace=True),
+                nn.MaxPool2d(kernel_size=2, stride=2),
+                nn.Dropout2d(p=0.1),
+                nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
+                nn.BatchNorm2d(num_features=64),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
+                nn.ReLU(inplace=True),
+                nn.MaxPool2d(kernel_size=2, stride=2),
+                nn.Dropout2d(p=0.1),
+                nn.Conv2d(in_channels=64, out_channels=64, kernel_size=4, stride=1, padding=2),
+                nn.BatchNorm2d(num_features=64),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
+                nn.Dropout2d(p=0.1),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
+                nn.BatchNorm2d(num_features=64),
+                nn.Dropout2d(p=0.1),
+                nn.ReLU(inplace=True)
+                )
 
         self.fc_layer = nn.Sequential(
-            nn.Linear(1024, 512),
-            nn.ReLU(inplace=True),
-            nn.Linear(512, 10)
-        )
+                nn.Dropout(p=0.1),
+                nn.Linear(1024, 512),
+                nn.ReLU(inplace=True),
+                nn.Linear(512, 10)
+                )
 
     def forward(self, x):
         x = self.conv_layer(x)
@@ -87,7 +88,7 @@ parser.add_argument('--resume', type=bool, default=False, help='whether training
 parser.add_argument('--is_gpu', type=bool, default=True, help='whether training using GPU')
 
 # parse the arguments
-opt = parser.parse_args()
+args = parser.parse_args()
 
 start_epoch = 0
 net = CNN()
@@ -95,7 +96,7 @@ net = net.cuda()
 net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=opt.lr, weight_decay=opt.wd)
+optimizer = optim.Adam(net.parameters(), lr=args.lr, weight_decay=args.wd)
 
 def calculate_accuracy(loader):
     correct = 0.
@@ -113,7 +114,7 @@ def calculate_accuracy(loader):
 
     return 100 * correct / total
 
-for epoch in range(start_epoch, opt.epochs + start_epoch):
+for epoch in range(start_epoch, args.epochs + start_epoch):
 
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
