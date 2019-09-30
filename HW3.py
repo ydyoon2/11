@@ -71,7 +71,6 @@ class CNN(nn.Module):
             nn.Linear(512, 10)
         )
 
-
     def forward(self, x):
         # conv layers
         x = self.conv_layer(x)
@@ -83,74 +82,33 @@ class CNN(nn.Module):
     
 parser = argparse.ArgumentParser()
 
-# directory
-parser.add_argument('--dataroot', type=str,
-                    default="/data", help='path to dataset')
-#parser.add_argument('--ckptroot', type=str,
-#                    default="../checkpoint/ckpt.t7", help='path to checkpoint')
 
-# hyperparameters settings
-parser.add_argument('--lr', type=float, default=0.005, help='learning rate')
+parser.add_argument('--dataroot', type=str, default="/data", help='path to dataset')
+parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
 parser.add_argument('--wd', type=float, default=5e-4, help='weight decay')
-parser.add_argument('--epochs', type=int, default=30,
-                    help='number of epochs to train')
-parser.add_argument('--batch_size_train', type=int,
-                    default=128, help='training set input batch size')
-parser.add_argument('--batch_size_test', type=int,
-                    default=64, help='test set input batch size')
-
-# training settings
-parser.add_argument('--resume', type=bool, default=False,
-                    help='whether training from ckpt')
-parser.add_argument('--is_gpu', type=bool, default=True,
-                    help='whether training using GPU')
+parser.add_argument('--epochs', type=int, default=30, help='number of epochs to train')
+parser.add_argument('--batch_size_train', type=int, default=128, help='training set input batch size')
+parser.add_argument('--batch_size_test', type=int, default=64, help='test set input batch size')
+parser.add_argument('--resume', type=bool, default=False, help='whether training from ckpt')
+parser.add_argument('--is_gpu', type=bool, default=True, help='whether training using GPU')
 
 # parse the arguments
 opt = parser.parse_args()
 
 start_epoch = 0
-
-# resume training from the last time
-#if opt.resume:
-#    # Load checkpoint
-#    print('==> Resuming from checkpoint ...')
-#    assert os.path.isdir(
-#        '../checkpoint'), 'Error: no checkpoint directory found!'
-#    checkpoint = torch.load(opt.ckptroot)
-#    net = checkpoint['net']
-#    start_epoch = checkpoint['epoch']
-#else:
-#    # start over
-#    print('==> Building new CNN model ...')
 net = CNN()
-
-
-#if opt.is_gpu:
 net = net.cuda()
 net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
 cudnn.benchmark = True
-
-
-# Loss function and optimizer
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=opt.lr, weight_decay=opt.wd)
 
-
 def calculate_accuracy(loader):
-    """Calculate accuracy.
-
-    Args:
-        loader (torch.utils.data.DataLoader): training / test set loader
-        is_gpu (bool): whether to run on GPU
-    Returns:
-        tuple: (overall accuracy, class level accuracy)
-    """
     correct = 0.
     total = 0.
 
     for data in loader:
         images, labels = data
-#        if is_gpu:
         images = images.cuda()
         labels = labels.cuda()
         outputs = net(Variable(images))
@@ -161,17 +119,12 @@ def calculate_accuracy(loader):
 
     return 100 * correct / total
 
-
-print("==> Start training ...")
-
 for epoch in range(start_epoch, opt.epochs + start_epoch):
 
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
         # get the inputs
         inputs, labels = data
-
-#        if opt.is_gpu:
         inputs = inputs.cuda()
         labels = labels.cuda()
 
@@ -204,18 +157,4 @@ for epoch in range(start_epoch, opt.epochs + start_epoch):
     train_accuracy = calculate_accuracy(trainloader)
     test_accuracy = calculate_accuracy(testloader)
 
-    print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(
-        epoch+1, running_loss, train_accuracy, test_accuracy))
-
-#    # save model
-#    if epoch % 50 == 0:
-#        print('==> Saving model ...')
-#        state = {
-#            'net': net,
-#            'epoch': epoch,
-#        }
-##        if not os.path.isdir('checkpoint'):
-##            os.mkdir('checkpoint')
-##        torch.save(state, '../checkpoint/ckpt.t7')
-#
-#print('==> Finished Training ...')
+    print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(epoch+1, running_loss, train_accuracy, test_accuracy))
