@@ -28,7 +28,7 @@ testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=True, num_workers=4)
 testloader = torch.utils.data.DataLoader(testset, batch_size=32, shuffle=False, num_workers=4)
 
-#CNN
+#dropout
 class CNN(nn.Module):
     def __init__(self):
         """CNN Builder."""
@@ -80,21 +80,20 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--dataroot', type=str, default="/data", help='path to dataset')
 parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
-parser.add_argument('--wd', type=float, default=5e-4, help='weight decay')
-parser.add_argument('--epochs', type=int, default=30, help='number of epochs to train')
+parser.add_argument('--wd', type=float, default=0.0005, help='weight decay')
+parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train')
 parser.add_argument('--batch_size_train', type=int, default=128, help='training set input batch size')
 parser.add_argument('--batch_size_test', type=int, default=64, help='test set input batch size')
 parser.add_argument('--resume', type=bool, default=False, help='whether training from ckpt')
 parser.add_argument('--is_gpu', type=bool, default=True, help='whether training using GPU')
 
-# parse the arguments
 args = parser.parse_args()
 
 start_epoch = 0
-net = CNN()
-net = net.cuda()
-net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
-cudnn.benchmark = True
+net = CNN().cuda()
+#net = net.cuda()
+#net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
+#cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=args.lr, weight_decay=args.wd)
 
