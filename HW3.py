@@ -93,7 +93,7 @@ def accuracy(loader):
         total += labels.size(0)
         correct += (predicted == labels).sum()
 
-    return correct / total
+    return 100 * correct / total
 
 for epoch in range(20):
 
@@ -133,4 +133,4 @@ for epoch in range(20):
     train_accuracy = accuracy(trainloader)
     test_accuracy = accuracy(testloader)
 
-    print("Iteration: {0}, Training accuracy: {1}, Test accuracy: {2}".format(epoch+1, train_accuracy, test_accuracy))
+    print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(epoch+1, running_loss, train_accuracy, test_accuracy))
