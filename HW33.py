@@ -86,9 +86,9 @@ def accuracy(loader):
         total += labels.size(0)
         correct += (predicted == labels).sum()
 
-    return 100 * correct / total
+    return correct / total
 
-for epoch in range(20):
+for epoch in range(30):
 
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
@@ -108,7 +108,7 @@ for epoch in range(20):
         loss = criterion(outputs, labels)
         loss.backward()
 
-        if epoch > 3:
+        if epoch > 4:
             for group in optimizer.param_groups:
                 for p in group['params']:
                     state = optimizer.state[p]
@@ -126,4 +126,4 @@ for epoch in range(20):
     train_accuracy = accuracy(trainloader)
     test_accuracy = accuracy(testloader)
 
-    print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
+    print("epoch: {}, train_accuracy: {}, test_accuracy: {}".format(epoch, train_accuracy, test_accuracy))
