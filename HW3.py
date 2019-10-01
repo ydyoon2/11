@@ -73,7 +73,7 @@ criterion = nn.CrossEntropyLoss()
 #Adam optimizer
 optimizer = optim.Adam(net.parameters(), lr=0.0001, weight_decay=0.0005)
 
-def calculate_accuracy(loader):
+def accuracy(loader):
     correct = 0
     total = 0
     for data in loader:
@@ -123,7 +123,7 @@ for epoch in range(20):
     running_loss /= len(trainloader)
 
     # Calculate training/test set accuracy of the existing model
-    train_accuracy = calculate_accuracy(trainloader)
-    test_accuracy = calculate_accuracy(testloader)
+    train_accuracy = accuracy(trainloader)
+    test_accuracy = accuracy(testloader)
 
-    print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(epoch+1, running_loss, train_accuracy, test_accuracy))
+    print("epoch: ", epoch+1 "train_accuracy", train_accuracy, "test_accuracy", test_accuracy)
