@@ -90,37 +90,37 @@ def accuracy(loader):
 
 for epoch in range(20):
 
-#    running_loss = 0.0
-#    for i, data in enumerate(trainloader, 0):
-#        # get the inputs
-#        inputs, labels = data
-#        inputs = inputs.cuda()
-#        labels = labels.cuda()
-#
-#        # wrap them in Variable
-#        inputs, labels = Variable(inputs), Variable(labels)
-#
-#        # zero the parameter gradients
-#        optimizer.zero_grad()
-#
-#        # forward + backward + optimize
-#        outputs = net(inputs)
-#        loss = criterion(outputs, labels)
-#        loss.backward()
-#
-#        if epoch > 3:
-#            for group in optimizer.param_groups:
-#                for p in group['params']:
-#                    state = optimizer.state[p]
-#                    if state['step'] >= 1024:
-#                        state['step'] = 1000
-#        optimizer.step()
-#
-#        # print statistics
-#        running_loss += loss.data
-#
-#    # Normalizing the loss by the total number of train batches
-#    running_loss /= len(trainloader)
+    running_loss = 0.0
+    for i, data in enumerate(trainloader, 0):
+        # get the inputs
+        inputs, labels = data
+        inputs = inputs.cuda()
+        labels = labels.cuda()
+
+        # wrap them in Variable
+        inputs, labels = Variable(inputs), Variable(labels)
+
+        # zero the parameter gradients
+        optimizer.zero_grad()
+
+        # forward + backward + optimize
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+
+
+        for group in optimizer.param_groups:
+            for p in group['params']:
+                state = optimizer.state[p]
+                if state['step'] >= 1024:
+                    state['step'] = 1000
+        optimizer.step()
+
+        # print statistics
+        running_loss += loss.data
+
+    # Normalizing the loss by the total number of train batches
+    running_loss /= len(trainloader)
 
     # Calculate training/test set accuracy of the existing model
     train_accuracy = accuracy(trainloader)
