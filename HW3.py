@@ -126,4 +126,4 @@ for epoch in range(20):
     train_accuracy = accuracy(trainloader)
     test_accuracy = accuracy(testloader)
 
-    print("epoch: ", epoch+1, "train_accuracy: ", train_accuracy, "test_accuracy", test_accuracy)
+    print("epoch: ", epoch, "train_accuracy: ", train_accuracy, "test_accuracy: ", test_accuracy)
