@@ -1,10 +1,3 @@
-"""
-HW3: Train a deep convolution network on a GPU with PyTorch for the CIFAR10 dataset. 
-The convolution network should use (A) dropout, (B) trained with RMSprop or ADAM, and (C) data augmentation. 
-For full credit, the model should achieve 80-90% Test Accuracy. Submit via Compass (1) the code and 
-(2) a paragraph (in a PDF document) which reports the results and briefly describes the model architecture. 
-"""
-
 import torch 
 import torchvision 
 import torch.nn as nn
@@ -119,8 +112,8 @@ for epoch in range(20):
             for group in optimizer.param_groups:
                 for p in group['params']:
                     state = optimizer.state[p]
-#                    if state['step'] >= 1024:
-#                        state['step'] = 1000
+                    if state['step'] >= 1024:
+                        state['step'] = 1000
         optimizer.step()
 
         # print statistics
