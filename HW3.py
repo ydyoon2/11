@@ -108,7 +108,7 @@ for epoch in range(30):
         loss = criterion(outputs, labels)
         loss.backward()
 
-        if epoch > 4:
+        if epoch > 3:
             for group in optimizer.param_groups:
                 for p in group['params']:
                     state = optimizer.state[p]
