@@ -76,36 +76,31 @@ optimizer = optim.Adam(net.parameters(), lr=0.0001, weight_decay=0.0005)
 def accuracy(loader):
     correct = 0
     total = 0
+    
     for data in loader:
-        images, labels = data
-        images = images.cuda()
-        labels = labels.cuda()
-        outputs = net(Variable(images))
-        _, predicted = torch.max(outputs.data, 1)
+        input_, label_ = data
+        input_ = input_.cuda()
+        label_ = label_.cuda()
+        output_ = net(Variable(input_))
+        _, predicted = torch.max(output_.data, 1)
 
-        total += labels.size(0)
-        correct += (predicted == labels).sum()
+        total += label_.size(0)
+        correct += (predicted == label_).sum()
 
-    return 100 * correct / total
+    return correct / total * 100
 
-for epoch in range(20):
-
+for epoch in range(30):
     running_loss = 0.0
+    
     for i, data in enumerate(trainloader, 0):
         # get the inputs
-        inputs, labels = data
-        inputs = inputs.cuda()
-        labels = labels.cuda()
-
-        # wrap them in Variable
-        inputs, labels = Variable(inputs), Variable(labels)
-
-        # zero the parameter gradients
+        input_, label_ = data
+        input_ = input_.cuda()
+        label_ = label_.cuda()
+        input_, label_ = Variable(input_), Variable(label_)
         optimizer.zero_grad()
-
-        # forward + backward + optimize
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
+        output_ = net(input_)
+        loss = criterion(output_, label_)
         loss.backward()
 
         if epoch > 4:
@@ -115,14 +110,9 @@ for epoch in range(20):
                     if state['step'] >= 1024:
                         state['step'] = 1000
         optimizer.step()
-
-        # print statistics
         running_loss += loss.data
-
-    # Normalizing the loss by the total number of train batches
+    
     running_loss /= len(trainloader)
-
-    # Calculate training/test set accuracy of the existing model
     train_accuracy = accuracy(trainloader)
     test_accuracy = accuracy(testloader)
 
