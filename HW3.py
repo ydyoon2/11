@@ -20,9 +20,9 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=True,
 testloader = torch.utils.data.DataLoader(testset, batch_size=32, shuffle=False, num_workers=4)
 
 #dropout
-class CNN(nn.Module):
+class cnn(nn.Module):
     def __init__(self):
-        super(CNN, self).__init__()
+        super(cnn, self).__init__()
 
         self.conv_layer = nn.Sequential(
                 nn.Conv2d(in_channels=3, out_channels=64, kernel_size=4, stride=1, padding=2),
@@ -67,11 +67,11 @@ class CNN(nn.Module):
         return x
 
 #GPU
-net = CNN().cuda()
+cnn = cnn().cuda()
 #CrossEntropyLoss() combines nn.LogSoftmax() and nn.NLLLoss()
 criterion = nn.CrossEntropyLoss()
 #Adam optimizer
-optimizer = optim.Adam(net.parameters(), lr=0.0001, weight_decay=0.0005)
+optimizer = optim.Adam(cnn.parameters(), lr=0.0001, weight_decay=0.0005)
 
 def accuracy(loader):
     correct = 0
@@ -80,7 +80,7 @@ def accuracy(loader):
         images, labels = data
         images = images.cuda()
         labels = labels.cuda()
-        outputs = net(Variable(images))
+        outputs = cnn(Variable(images))
         _, predicted = torch.max(outputs.data, 1)
 
         total += labels.size(0)
@@ -97,8 +97,8 @@ for epoch in range(30):
         inputs = inputs.cuda()
         labels = labels.cuda()
         inputs, labels = Variable(inputs), Variable(labels)
-        optimizer.zero_grad()
-        outputs = net(inputs)
+        optimizer.zero_grad() #gradient initialization
+        outputs = cnn(inputs)
         loss = criterion(outputs, labels)
         loss.backward()
 
