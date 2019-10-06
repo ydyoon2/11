@@ -1,92 +1,290 @@
 """
-Deep convolutional networks using ResNets
+RNN LSTM GRU
 """
 
-import torch 
-import torchvision 
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import torch
 import torch.nn as nn
-import torch.utils.data 
-import torch.optim as optim
 from torch.autograd import Variable
-from torchvision import datasets
-import torchvision.transforms as transforms
-import os
+from sklearn.preprocessing import MinMaxScaler
+
+route = "C:/Users/aswes/Desktop/2019/Practicum/Crude/"
+
+df = pd.read_csv("%sCombined.csv"%route, index_col = 0, parse_dates=[0])
+
+def split_data(data, split_date):
+    return data[data.index <= split_date].copy(), \
+           data[data.index >  split_date].copy()
+
+date = '2017-12-31'
+
+sc = MinMaxScaler()
+scaled_df = sc.fit_transform(df)
+
+def sliding_windows(data, seq_length):
+    x = []
+    y = []
+
+    for i in range(len(data)-seq_length-1):
+        _x = data[i:(i+seq_length)]
+        _y = data[i+seq_length]
+        x.append(_x)
+        y.append(_y)
+
+    return np.array(x),np.array(y)
+
+seq_length = 10
+x, y = sliding_windows(scaled_df, seq_length)
+
+train_size = int(len(y) * 0.8)
+test_size = len(y) - train_size
+
+dataX = Variable(torch.Tensor(np.array(x)))
+dataY = Variable(torch.Tensor(np.array(y)))
+
+trainX = Variable(torch.Tensor(np.array(x[0:train_size])))
+trainY = Variable(torch.Tensor(np.array(y[0:train_size])))
+
+testX = Variable(torch.Tensor(np.array(x[train_size:len(x)])))
+testY = Variable(torch.Tensor(np.array(y[train_size:len(y)])))
 
 
-batch_size = 32
-num_epochs = 10
+#scaled_df = pd.DataFrame(scaled_df, index=df.index, columns=df.columns)
+#
+#train, test = split_data(scaled_df, date)
+#
+#
+#plt.figure(figsize=(15,5))
+#plt.title('scaled_data')
+#plt.xlabel('time')
+#plt.ylabel('positions')
+#plt.plot(train.index,train.iloc[:,:])
+#plt.plot(test.index,test.iloc[:,:])
+#plt.axvline(x=date, color='k', linestyle='--')
+##plt.legend(train.iloc[:,:], fancybox=True, framealpha=0, loc='best')
+#plt.show()
+#
+#plt.figure(figsize=(15,5))
+#plt.title('no_abrupt')
+#plt.xlabel('time')
+#plt.ylabel('no')
+#plt.plot(train.index,train.iloc[:,-1])
+#plt.plot(test.index,test.iloc[:,-1])
+#plt.axvline(x=date, color='k', linestyle='--')
+##plt.legend(train.iloc[:,:], fancybox=True, framealpha=0, loc='best')
+#plt.show()
+#
+#
+#X_train = train.iloc[:,:-1] 
+#y_train = train.iloc[:,-1]
+#X_test =  test.iloc[:,:-1]
+#y_test =  test.iloc[:,-1]
+#
+#trainX = Variable(torch.Tensor(np.array(X_train)))
+#trainY = Variable(torch.Tensor(np.array(y_train)))
+#testX = Variable(torch.Tensor(np.array(X_test)))
+#testY = Variable(torch.Tensor(np.array(y_test)))
 
-transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
-                                      transforms.RandomHorizontalFlip(),
-                                      transforms.ToTensor(), 
-                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
-transform_test = transforms.Compose([transforms.ToTensor(),
-                                     transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
+class LSTM(nn.Module):
 
-# For trainning data
-trainset = torchvision.datasets.CIFAR100(root='~/scratch/', train=True,download=False, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=8)
+    def __init__(self, num_classes, input_size, hidden_size, num_layers):
+        super(LSTM, self).__init__()
+        
+        self.num_classes = num_classes
+        self.num_layers = num_layers
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
+                            num_layers=num_layers, batch_first=True)
+        
+        self.fc = nn.Linear(hidden_size, num_classes)
 
-# For testing data
-testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False,download=False, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=8)
+    def forward(self, x):
+        h_0 = Variable(torch.zeros(
+            self.num_layers, x.size(0), self.hidden_size))
+        
+        c_0 = Variable(torch.zeros(
+            self.num_layers, x.size(0), self.hidden_size))
+        
+        # Propagate input through LSTM
+        ula, (h_out, _) = self.lstm(x, (h_0, c_0))
+        
+        h_out = h_out.view(-1, self.hidden_size)
+        
+        out = self.fc(h_out)
+        
+        return out
 
+num_epochs = 10000
+learning_rate = 0.001
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+input_size = 71
+hidden_size = 2
+num_layers = 1
+
+num_classes = 71
+
+lstm = LSTM(num_classes, input_size, hidden_size, num_layers).cuda()
+
+criterion = torch.nn.MSELoss()    # mean-squared error for regression
+optimizer = torch.optim.Adam(lstm.parameters(), lr=learning_rate)
+#optimizer = torch.optim.SGD(lstm.parameters(), lr=learning_rate)
+
+# Train the model
 for epoch in range(num_epochs):
-    for batch_idx, (images, labels) in enumerate(trainloader):
-        images = images.to(device)
-        labels = labels.to(device)
+    outputs = lstm(trainX)
+    optimizer.zero_grad()
+    
+    # obtain the loss function
+    loss = criterion(outputs, trainY)
+    
+    loss.backward()
+    
+    optimizer.step()
+    if epoch % 100 == 0:
+      print("Epoch: %d, loss: %1.5f" % (epoch, loss.item()))
 
-def create_val_folder(val_dir):
-    """
-    This method is responsible for separating validation
-    images into separate sub folders
-    """
-    # path where validation data is present now
-    path = os.path.join(val_dir, 'images')
-    # file where image2class mapping is present
-    filename = os.path.join(val_dir, 'val_annotations.txt')
-    fp = open(filename, "r") # open file in read mode
-    data = fp.readlines() # read line by line
-    """
-    Create a dictionary with image names as key and
-    corresponding classes as values
-    """
-    val_img_dict = {}
-    for line in data:
-        words = line.split("\t")
-        val_img_dict[words[0]] = words[1]
-    fp.close()
-    # Create folder if not present, and move image into proper folder
-    for img, folder in val_img_dict.items():
-        newpath = (os.path.join(path, folder))
-        if not os.path.exists(newpath): # check if folder exists
-            os.makedirs(newpath)
-        # Check if image exists in default directory
-        if os.path.exists(os.path.join(path, img)):
-            os.rename(os.path.join(path, img), os.path.join(newpath, img))
-    return
+lstm.eval()
+train_predict = lstm(dataX)
 
-train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train'
-train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
-#print(train_dataset.class_to_idx)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
-val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/images'
-if 'val_' in os.listdir(val_dir)[0]:
-    create_val_folder(val_dir)
-else:
-    pass
-val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
-#print(val_dataset.class_to_idx)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-for images, labels in train_loader:
-    images = Variable(images).to(device)
-    labels = Variable(labels).to(device)
-for images, labels in val_loader:
-    images = Variable(images).to(device)
-    labels = Variable(labels).to(device)
-    
-    
-    
+data_predict = train_predict.data.numpy()
+dataY_plot = dataY.data.numpy()
+
+data_predict = sc.inverse_transform(data_predict)
+dataY_plot = sc.inverse_transform(dataY_plot)
+
+plt.axvline(x=train_size, c='r', linestyle='--')
+
+plt.plot(dataY_plot[:,-1])
+plt.plot(data_predict[:,-1])
+plt.suptitle('Time-Series Prediction')
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#
+#class LSTM(nn.Module):
+#
+#    def __init__(self, input_dim, hidden_dim, batch_size, output_dim=1,
+#                    num_layers=2):
+#        super(LSTM, self).__init__()
+#        self.input_dim = input_dim
+#        self.hidden_dim = hidden_dim
+#        self.batch_size = batch_size
+#        self.num_layers = num_layers
+#
+#        # Define the LSTM layer
+#        self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.num_layers)
+#
+#        # Define the output layer
+#        self.linear = nn.Linear(self.hidden_dim, output_dim)
+#
+#    def init_hidden(self):
+#        # This is what we'll initialise our hidden state as
+#        return (torch.zeros(self.num_layers, self.batch_size, self.hidden_dim),
+#                torch.zeros(self.num_layers, self.batch_size, self.hidden_dim))
+#
+#    def forward(self, input):
+#        # Forward pass through LSTM layer
+#        # shape of lstm_out: [input_size, batch_size, hidden_dim]
+#        # shape of self.hidden: (a, b), where a and b both 
+#        # have shape (num_layers, batch_size, hidden_dim).
+#        lstm_out, self.hidden = self.lstm(input.view(len(input), self.batch_size, -1))
+#        
+#        # Only take the output from the final timetep
+#        # Can pass on the entirety of lstm_out to the next layer if it is a seq2seq prediction
+#        y_pred = self.linear(lstm_out[-1].view(self.batch_size, -1))
+#        return y_pred.view(-1)
+#
+#model = LSTM(lstm_input_size, h1, batch_size=num_train, output_dim=output_dim, num_layers=num_layers)
+#
+#
+#loss_fn = torch.nn.MSELoss(size_average=False)
+#
+#optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate)
+#
+######################
+## Train model
+######################
+#
+#hist = np.zeros(num_epochs)
+#
+#for t in range(num_epochs):
+#    # Clear stored gradient
+#    model.zero_grad()
+#    
+#    # Initialise hidden state
+#    # Don't do this if you want your LSTM to be stateful
+#    model.hidden = model.init_hidden()
+#    
+#    # Forward pass
+#    y_pred = model(X_train)
+#
+#    loss = loss_fn(y_pred, y_train)
+#    if t % 100 == 0:
+#        print("Epoch ", t, "MSE: ", loss.item())
+#    hist[t] = loss.item()
+#
+#    # Zero out gradient, else they will accumulate between epochs
+#    optimiser.zero_grad()
+#
+#    # Backward pass
+#    loss.backward()
+#
+#    # Update parameters
+#    optimiser.step()
