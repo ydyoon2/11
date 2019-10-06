@@ -118,8 +118,8 @@ class LSTM(nn.Module):
         
         return out
 
-num_epochs = 10000
-learning_rate = 0.001
+num_epochs = 100000
+learning_rate = 0.0001
 
 input_size = 71
 hidden_size = 2
