@@ -1,7 +1,6 @@
 """
 resnet_cifar100.py
 """
-
 import torch 
 import torchvision 
 import torch.nn as nn
@@ -22,14 +21,13 @@ transform_test = transforms.Compose([transforms.ToTensor(),
                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 # For trainning data
 trainset = torchvision.datasets.CIFAR100(root='~/scratch/', train=True,download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=0)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=8)
 # For testing data
 testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False,download=True, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=0)
+testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=8)
 
 # Access the data
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 for epoch in range(num_epochs):
     for batch_idx, (images, labels) in enumerate(trainloader):
         images = images.to(device)
@@ -83,10 +81,10 @@ class ResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.02)
         
-        self.layer1 = self._make_layer(basic_block, 64, num_blocks[0], stride=1)
-        self.layer2 = self._make_layer(basic_block, 128, num_blocks[1], stride=2)
-        self.layer3 = self._make_layer(basic_block, 256, num_blocks[2], stride=2)
-        self.layer4 = self._make_layer(basic_block, 512, num_blocks[3], stride=2)
+        self.layer1 = self._make_layer(basic_block, 32, num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(basic_block, 64, num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(basic_block, 128, num_blocks[2], stride=2)
+        self.layer4 = self._make_layer(basic_block, 256, num_blocks[3], stride=2)
         
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
         self.fc_layer = nn.Linear(256, num_classes)
@@ -133,7 +131,8 @@ class ResNet(nn.Module):
         x = self.layer4(x)
         
         x = self.maxpool(x)
-        x = self.fc(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc_layer(x)
         
         return x
 
