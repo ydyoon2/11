@@ -221,14 +221,14 @@ def data_loader(dataroot, batch_size_train, batch_size_test):
     # Loading CIFAR100
     print("==> Preparing CIFAR100 dataset ...")
 
-    trainset = torchvision.datasets.CIFAR100(root=dataroot,
+    trainset = torchvision.datasets.CIFAR100(root='~/scratch/',
                                              train=True,
                                              download=True,
                                              transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
         trainset, batch_size=batch_size_train, shuffle=True, num_workers=4)
 
-    testset = torchvision.datasets.CIFAR100(root=dataroot,
+    testset = torchvision.datasets.CIFAR100(root='~/scratch/',
                                             train=False,
                                             download=True,
                                             transform=transform_test)
