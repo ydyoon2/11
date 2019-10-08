@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 
 import argparse
 
-from resnet import resnet_cifar
+#from resnet import resnet_cifar
 
 
 
