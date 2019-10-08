@@ -77,7 +77,7 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
 
         self.in_channels = 32
-        self.conv1 = conv3x3(3, 32, 3) #input, output, kernel, stride, padding
+        self.conv1 = conv3x3(3, 32)
         self.bn1 = nn.BatchNorm2d(32) #feature
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.02)
