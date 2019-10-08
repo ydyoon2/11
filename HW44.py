@@ -34,6 +34,7 @@ for epoch in range(num_epochs):
         labels = labels.to(device)
         
 def conv3x3(in_channels, out_channels, stride=1):
+    
     return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
 
 
@@ -137,10 +138,10 @@ class ResNet(nn.Module):
         return x
 
 
-resnet = ResNet(BasicBlock, [2, 4, 4, 2], 10).to(device)
+resnet50 = ResNet(BasicBlock, [2, 4, 4, 2], 10).to(device)
 
 criterion = nn.CrossEntropyLoss().to(device)
-optimizer = torch.optim.SGD(resnet.parameters(), lr = 0.1, momentum = 0.9, weight_decay=5e-4)
+optimizer = torch.optim.SGD(resnet50.parameters(), lr = 0.1, momentum = 0.9, weight_decay=5e-4)
 lr_sche = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
 import visdom
@@ -150,4 +151,81 @@ vis.close(env="main")
 
 loss_plt = vis.line(Y=torch.Tensor(1).zero_(),opts=dict(title='loss_tracker', legend=['loss'], showlegend=True))
 acc_plt = vis.line(Y=torch.Tensor(1).zero_(),opts=dict(title='Accuracy', legend=['Acc'], showlegend=True))
+
+def acc_check(net, test_set, epoch, save=1):
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in test_set:
+            images, labels = data
+            images = images.to(device)
+            labels = labels.to(device)
+            outputs = net(images)
+
+            _, predicted = torch.max(outputs.data, 1)
+
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    
+    acc = (100 * correct / total)
+    print('Accuracy of the network on the 10000 test images: %d %%' % acc)
+    if save:
+        torch.save(net.state_dict(), "./model/model_epoch_{}_acc_{}.pth".format(epoch, int(acc)))
+    return acc
+
+print(len(trainloader))
+epochs = 150
+
+for epoch in range(epochs):  # loop over the dataset multiple times
+
+    running_loss = 0.0
+    lr_sche.step()
+    for i, data in enumerate(trainloader, 0):
+        # get the inputs
+        inputs, labels = data
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+
+        # zero the parameter gradients
+        optimizer.zero_grad()
+
+        # forward + backward + optimize
+        outputs = resnet50(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        # print statistics
+        running_loss += loss.item()
+        if i % 30 == 29:    # print every 30 mini-batches
+            value_tracker(loss_plt, torch.Tensor([running_loss/30]), torch.Tensor([i + epoch*len(trainloader) ]))
+            print('[%d, %5d] loss: %.3f' %
+                  (epoch + 1, i + 1, running_loss / 30))
+            running_loss = 0.0
+    
+    #Check Accuracy
+    acc = acc_check(resnet50, testloader, epoch, save=1)
+    value_tracker(acc_plt, torch.Tensor([acc]), torch.Tensor([epoch]))
+    
+
+print('Finished Training')
+
+correct = 0
+total = 0
+
+with torch.no_grad():
+    for data in testloader:
+        images, labels = data
+        images = images.to(device)
+        labels = labels.to(device)
+        outputs = resnet50(images)
+        
+        _, predicted = torch.max(outputs.data, 1)
+        
+        total += labels.size(0)
+        
+        correct += (predicted == labels).sum().item()
+
+print('Accuracy of the network on the 10000 test images: %d %%' % (
+    100 * correct / total))
 
