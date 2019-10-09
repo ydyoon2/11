@@ -211,13 +211,13 @@ start_epoch = 0
 
 
 print('==> Building new ResNet model ...')
-net = resnet_cifar()
+net = resnet_cifar().cuda
 
 print("==> Initialize CUDA support for ResNet model ...")
 
 
-net = torch.nn.DataParallel(net).cuda()
-cudnn.benchmark = True
+#net = torch.nn.DataParallel(net).cuda()
+#cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
