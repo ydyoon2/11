@@ -6,7 +6,6 @@ import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import torch.utils.data
 from torch.autograd import Variable
-import argparse
 
 # CIFAR100
 transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
@@ -20,22 +19,7 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True
 testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False, download=True, transform=transform_test)
 testloader = torch.utils.data.DataLoader(testset, batch_size=256, shuffle=False, num_workers=8)
 
-def conv3x3(in_channels, out_channels, stride=1):
-    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
-
-def resnet_cifar(**kwargs):
-    model = ResNet(BasicBlock, [2, 4, 4, 2], 100, **kwargs)
-    return model
-
-def initialize_weights(module):
-    if isinstance(module, nn.Conv2d):
-        nn.init.xavier_normal(module.weight.data)
-    elif isinstance(module, nn.BatchNorm2d):
-        module.weight.data.fill_(1)
-        module.bias.data.zero_()
-    elif isinstance(module, nn.Linear):
-        module.bias.data.zero_()
-
+# BasicBlock
 class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
@@ -66,6 +50,7 @@ class BasicBlock(nn.Module):
         
         return out
 
+# ResNet
 class ResNet(nn.Module):
     def __init__(self, basic_block, num_blocks, num_classes=100):
         super(ResNet, self).__init__()
@@ -127,8 +112,10 @@ class ResNet(nn.Module):
 
         return out
 
+def conv3x3(in_channels, out_channels, stride=1):
+    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
 
-def calculate_accuracy(net, loader):
+def accuracy(net, loader):
     correct = 0.
     total = 0.
 
@@ -145,81 +132,27 @@ def calculate_accuracy(net, loader):
 
     return 100 * correct / total
 
-def train(net, criterion, optimizer, trainloader, testloader, start_epoch, epochs):
-
-    for epoch in range(start_epoch, epochs + start_epoch):
-
+def train(net, criterion, optimizer, trainloader, testloader, epochs):
+    for epoch in range(epochs):
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
-
             inputs, labels = data
-
-
             inputs = inputs.cuda()
             labels = labels.cuda()
-
             inputs, labels = Variable(inputs), Variable(labels)
-
             outputs = net(inputs)
             loss = criterion(outputs, labels)
-
             optimizer.zero_grad()
             loss.backward()
-
             optimizer.step()
-
             running_loss += loss.data
-
         running_loss /= len(trainloader)
-
-        train_accuracy = calculate_accuracy(net, trainloader)
-        test_accuracy = calculate_accuracy(net, testloader)
-
+        train_accuracy = accuracy(net, trainloader)
+        test_accuracy = accuracy(net, testloader)
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
-
-parser = argparse.ArgumentParser()
-
-# directory
-parser.add_argument('--dataroot', type=str,
-                    default="../data", help='path to dataset')
-parser.add_argument('--ckptroot', type=str,
-                    default="../checkpoint/ckpt.t7", help='path to checkpoint')
-
-# hyperparameters settings
-parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
-parser.add_argument('--momentum', type=float,
-                    default=0.9, help='momentum factor')
-parser.add_argument('--weight_decay', type=float,
-                    default=1e-5, help='weight decay (L2 penalty)')
-parser.add_argument('--epochs', type=int, default=500,
-                    help='number of epochs to train')
-parser.add_argument('--batch_size_train', type=int,
-                    default=256, help='training set input batch size')
-parser.add_argument('--batch_size_test', type=int,
-                    default=256, help='test set input batch size')
-
-# training settings
-parser.add_argument('--resume', type=bool, default=False,
-                    help='whether re-training from ckpt')
-
-
-# parse the arguments
-args = parser.parse_args()
-
-start_epoch = 0
-
-
-print('==> Building new ResNet model ...')
-net = resnet_cifar()
-
-print("==> Initialize CUDA support for ResNet model ...")
-
-
-net = torch.nn.DataParallel(net).cuda()
-cudnn.benchmark = True
-
+resnet = ResNet(BasicBlock, [2, 4, 4, 2], 100)
+resnet = torch.nn.DataParallel(resnet).cuda()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-
-train(net, criterion, optimizer, trainloader, testloader, start_epoch, args.epochs)
+optimizer = torch.optim.SGD(resnet.parameters(), lr = 0.1, momentum = 0.9, weight_decay=5e-4)
+train(resnet, criterion, optimizer, trainloader, testloader, 50)
