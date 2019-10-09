@@ -154,5 +154,5 @@ def train(net, criterion, optimizer, trainloader, testloader, epochs):
 resnet = ResNet(BasicBlock, [2, 4, 4, 2], 100)
 resnet = torch.nn.DataParallel(resnet).cuda()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(resnet.parameters(), lr = 0.1, momentum = 0.9, weight_decay=5e-4)
+optimizer = torch.optim.SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0001)
 train(resnet, criterion, optimizer, trainloader, testloader, 50)
