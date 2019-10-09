@@ -330,9 +330,7 @@ def train(net, criterion, optimizer, trainloader,
                 'net': net.module if is_gpu else net,
                 'epoch': epoch,
             }
-            if not os.path.isdir('../checkpoint'):
-                os.mkdir('../checkpoint')
-            torch.save(state, '../checkpoint/ckpt.t7')
+           
 
     print('==> Finished Training ...')
 
