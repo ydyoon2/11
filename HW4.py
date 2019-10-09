@@ -1,4 +1,3 @@
-import os
 import torch
 import torchvision
 import torch.optim
@@ -9,7 +8,7 @@ import torch.utils.data
 from torch.autograd import Variable
 import argparse
 
- 
+# CIFAR100
 transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
                                       transforms.RandomVerticalFlip(),
                                       transforms.ToTensor(), 
@@ -21,6 +20,13 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True
 testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False, download=True, transform=transform_test)
 testloader = torch.utils.data.DataLoader(testset, batch_size=256, shuffle=False, num_workers=8)
 
+def conv3x3(in_channels, out_channels, stride=1):
+    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+
+def resnet_cifar(**kwargs):
+    model = ResNet(BasicBlock, [2, 4, 4, 2], 100, **kwargs)
+    return model
+
 def initialize_weights(module):
     if isinstance(module, nn.Conv2d):
         nn.init.xavier_normal(module.weight.data)
@@ -29,13 +35,6 @@ def initialize_weights(module):
         module.bias.data.zero_()
     elif isinstance(module, nn.Linear):
         module.bias.data.zero_()
-
-def conv3x3(in_channels, out_channels, stride=1):
-    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
-
-def resnet_cifar(**kwargs):
-    model = ResNet(BasicBlock, [2, 4, 4, 2], 100, **kwargs)
-    return model
 
 class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
@@ -68,7 +67,7 @@ class BasicBlock(nn.Module):
         return out
 
 class ResNet(nn.Module):
-    def __init__(self, block, duplicates, num_classes=100):
+    def __init__(self, basic_block, num_blocks, num_classes=100):
         super(ResNet, self).__init__()
 
         self.in_channels = 32
@@ -77,24 +76,24 @@ class ResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.02)
 
-        self.conv2_x = self._make_block(block, duplicates[0], out_channels=32, stride=1, padding=1)
-        self.conv3_x = self._make_block(block, duplicates[1], out_channels=64, stride=2, padding=1)
-        self.conv4_x = self._make_block(block, duplicates[2], out_channels=128, stride=2, padding=1)
-        self.conv5_x = self._make_block(block, duplicates[3], out_channels=256, stride=2, padding=1)
+        self.conv2_x = self._make_block(basic_block, num_blocks[0], out_channels=32, stride=1, padding=1)
+        self.conv3_x = self._make_block(basic_block, num_blocks[1], out_channels=64, stride=2, padding=1)
+        self.conv4_x = self._make_block(basic_block, num_blocks[2], out_channels=128, stride=2, padding=1)
+        self.conv5_x = self._make_block(basic_block, num_blocks[3], out_channels=256, stride=2, padding=1)
 
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
         self.fc_layer = nn.Linear(256, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal(m.weight.data, mode='fan_out')
+                nn.init.kaiming_normal_(m.weight.data, mode='fan_out')
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
 
-    def _make_block(self, block, duplicates, out_channels, stride=1, padding = 1):
+    def _make_block(self, basic_block, num_blocks, out_channels, stride=1, padding = 1):
         downsample = None
         if (stride != 1) or (self.in_channels != out_channels):
             downsample = nn.Sequential(
@@ -104,10 +103,10 @@ class ResNet(nn.Module):
 
         layers = []
         layers.append(
-            block(self.in_channels, out_channels, stride, downsample))
+            basic_block(self.in_channels, out_channels, stride, downsample))
         self.in_channels = out_channels
-        for _ in range(1, duplicates):
-            layers.append(block(out_channels, out_channels))
+        for _ in range(1, num_blocks):
+            layers.append(basic_block(out_channels, out_channels))
 
         return nn.Sequential(*layers)
 
@@ -211,35 +210,17 @@ args = parser.parse_args()
 
 start_epoch = 0
 
-# resume training from the last time
-if args.resume:
-    # Load checkpoint
-    print('==> Resuming from checkpoint ...')
-    assert os.path.isdir(
-        '~/checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load(args.ckptroot)
-    net = checkpoint['net']
-    start_epoch = checkpoint['epoch']
-else:
-    # start over
-    print('==> Building new ResNet model ...')
-    net = resnet_cifar()
+
+print('==> Building new ResNet model ...')
+net = resnet_cifar()
 
 print("==> Initialize CUDA support for ResNet model ...")
 
-# For training on GPU, we need to transfer net and data onto the GPU
-# http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
 if args.is_gpu:
-    # net = net.cuda()
-    # net = torch.nn.DataParallel(
-    #     net, device_ids=range(torch.cuda.device_count()))
     net = torch.nn.DataParallel(net).cuda()
     cudnn.benchmark = True
 
-# Loss function, optimizer and scheduler
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
-
-# training
 train(net, criterion, optimizer, trainloader, testloader, start_epoch, args.epochs, args.is_gpu)
