@@ -12,9 +12,9 @@ from torch.autograd import Variable
 def data_loader(dataroot, batch_size_train, batch_size_test):
     
     transform_train = transforms.Compose([transforms.ToTensor(), 
-                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
-    transform_test = transforms.Compose([transforms.ToTensor(),
-                                     transforms.Normalize((0.4914, 0.48216, 0.44653)
+                                          transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
+    transform_test = transforms.Compose([transforms.ToTensor(), 
+                                         transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 
     trainset = torchvision.datasets.CIFAR100(root='~/scratch/',
                                              train=True,
