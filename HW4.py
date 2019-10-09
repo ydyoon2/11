@@ -128,15 +128,15 @@ class ResNet(nn.Module):
         return out
 
 
-def calculate_accuracy(net, loader, is_gpu):
+def calculate_accuracy(net, loader):
     correct = 0.
     total = 0.
 
     for data in loader:
         images, labels = data
-        if is_gpu:
-            images = images.cuda()
-            labels = labels.cuda()
+        
+        images = images.cuda()
+        labels = labels.cuda()
         outputs = net(Variable(images))
         _, predicted = torch.max(outputs.data, 1)
 
@@ -145,7 +145,7 @@ def calculate_accuracy(net, loader, is_gpu):
 
     return 100 * correct / total
 
-def train(net, criterion, optimizer, trainloader, testloader, start_epoch, epochs, is_gpu):
+def train(net, criterion, optimizer, trainloader, testloader, start_epoch, epochs):
 
     for epoch in range(start_epoch, epochs + start_epoch):
 
@@ -154,9 +154,9 @@ def train(net, criterion, optimizer, trainloader, testloader, start_epoch, epoch
 
             inputs, labels = data
 
-            if is_gpu:
-                inputs = inputs.cuda()
-                labels = labels.cuda()
+
+            inputs = inputs.cuda()
+            labels = labels.cuda()
 
             inputs, labels = Variable(inputs), Variable(labels)
 
@@ -172,8 +172,8 @@ def train(net, criterion, optimizer, trainloader, testloader, start_epoch, epoch
 
         running_loss /= len(trainloader)
 
-        train_accuracy = calculate_accuracy(net, trainloader, is_gpu)
-        test_accuracy = calculate_accuracy(net, testloader, is_gpu)
+        train_accuracy = calculate_accuracy(net, trainloader)
+        test_accuracy = calculate_accuracy(net, testloader)
 
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
@@ -202,8 +202,7 @@ parser.add_argument('--batch_size_test', type=int,
 # training settings
 parser.add_argument('--resume', type=bool, default=False,
                     help='whether re-training from ckpt')
-parser.add_argument('--is_gpu', type=bool, default=True,
-                    help='whether training using GPU')
+
 
 # parse the arguments
 args = parser.parse_args()
@@ -216,11 +215,11 @@ net = resnet_cifar()
 
 print("==> Initialize CUDA support for ResNet model ...")
 
-if args.is_gpu:
-    net = torch.nn.DataParallel(net).cuda()
-    cudnn.benchmark = True
+
+net = torch.nn.DataParallel(net).cuda()
+cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
-train(net, criterion, optimizer, trainloader, testloader, start_epoch, args.epochs, args.is_gpu)
+train(net, criterion, optimizer, trainloader, testloader, start_epoch, args.epochs)
