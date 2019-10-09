@@ -180,6 +180,13 @@ def train(net, criterion, optimizer, trainloader, testloader, start_epoch, epoch
 
 parser = argparse.ArgumentParser()
 
+# directory
+parser.add_argument('--dataroot', type=str,
+                    default="../data", help='path to dataset')
+parser.add_argument('--ckptroot', type=str,
+                    default="../checkpoint/ckpt.t7", help='path to checkpoint')
+
+# hyperparameters settings
 parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
 parser.add_argument('--momentum', type=float,
                     default=0.9, help='momentum factor')
@@ -191,12 +198,27 @@ parser.add_argument('--batch_size_train', type=int,
                     default=256, help='training set input batch size')
 parser.add_argument('--batch_size_test', type=int,
                     default=256, help='test set input batch size')
+
+# training settings
 parser.add_argument('--resume', type=bool, default=False,
                     help='whether re-training from ckpt')
 
+
+# parse the arguments
 args = parser.parse_args()
+
 start_epoch = 0
-net = resnet_cifar().cuda
+
+
+print('==> Building new ResNet model ...')
+net = resnet_cifar()
+
+print("==> Initialize CUDA support for ResNet model ...")
+
+
+net = torch.nn.DataParallel(net).cuda()
+cudnn.benchmark = True
+
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
