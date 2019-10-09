@@ -5,9 +5,9 @@ import torch.optim
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
-import argparse
 import torch.utils.data
 from torch.autograd import Variable
+import argparse
 
 def data_loader(dataroot, batch_size_train, batch_size_test):    
     transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
@@ -37,7 +37,6 @@ def conv3x3(in_channels, out_channels, stride=1):
 def resnet_cifar(**kwargs):
     model = ResNet(BasicBlock, [2, 4, 4, 2], 100, **kwargs)
     return model
-
 
 class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
@@ -69,13 +68,8 @@ class BasicBlock(nn.Module):
         
         return out
 
-
-
 class ResNet(nn.Module):
-    """Residual Neural Network."""
-
     def __init__(self, block, duplicates, num_classes=100):
-        """Residual Neural Network Builder."""
         super(ResNet, self).__init__()
 
         self.in_channels = 32
@@ -84,7 +78,6 @@ class ResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.02)
 
-        # block of Basic Blocks
         self.conv2_x = self._make_block(block, duplicates[0], out_channels=32, stride=1, padding=1)
         self.conv3_x = self._make_block(block, duplicates[1], out_channels=64, stride=2, padding=1)
         self.conv4_x = self._make_block(block, duplicates[2], out_channels=128, stride=2, padding=1)
@@ -93,8 +86,6 @@ class ResNet(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
         self.fc_layer = nn.Linear(256, num_classes)
 
-        # initialize weights
-        # self.apply(initialize_weights)
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal(m.weight.data, mode='fan_out')
@@ -122,13 +113,11 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        """Forward pass of ResNet."""
         out = self.conv1(x)
         out = self.bn(out)
         out = self.relu(out)
         out = self.dropout(out)
 
-        # Stacked Basic Blocks
         out = self.conv2_x(out)
         out = self.conv3_x(out)
         out = self.conv4_x(out)
@@ -158,9 +147,7 @@ def calculate_accuracy(net, loader, is_gpu):
 
     return 100 * correct / total
 
-
-def train(net, criterion, optimizer, trainloader,
-          testloader, start_epoch, epochs, is_gpu):
+def train(net, criterion, optimizer, trainloader, testloader, start_epoch, epochs, is_gpu):
 
     for epoch in range(start_epoch, epochs + start_epoch):
 
@@ -190,8 +177,7 @@ def train(net, criterion, optimizer, trainloader,
         train_accuracy = calculate_accuracy(net, trainloader, is_gpu)
         test_accuracy = calculate_accuracy(net, testloader, is_gpu)
 
-        print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(
-            epoch+1, running_loss, train_accuracy, test_accuracy))
+        print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
 
 parser = argparse.ArgumentParser()
