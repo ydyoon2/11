@@ -403,18 +403,8 @@ def main():
     start_epoch = 0
 
     # resume training from the last time
-    if args.resume:
-        # Load checkpoint
-        print('==> Resuming from checkpoint ...')
-        assert os.path.isdir(
-            '../checkpoint'), 'Error: no checkpoint directory found!'
-        checkpoint = torch.load(args.ckptroot)
-        net = checkpoint['net']
-        start_epoch = checkpoint['epoch']
-    else:
-        # start over
-        print('==> Building new ResNet model ...')
-        net = resnet_cifar()
+    
+    net = resnet_cifar()
 
     print("==> Initialize CUDA support for ResNet model ...")
 
