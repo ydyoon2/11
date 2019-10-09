@@ -16,19 +16,11 @@ def data_loader(dataroot, batch_size_train, batch_size_test):
     transform_test = transforms.Compose([transforms.ToTensor(), 
                                          transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 
-    trainset = torchvision.datasets.CIFAR100(root='~/scratch/',
-                                             train=True,
-                                             download=True,
-                                             transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size_train, shuffle=True, num_workers=4)
+    trainset = torchvision.datasets.CIFAR100(root='~/scratch/', train=True, download=True, transform=transform_train)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=8)
 
-    testset = torchvision.datasets.CIFAR100(root='~/scratch/',
-                                            train=False,
-                                            download=True,
-                                            transform=transform_test)
-    testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size_test, shuffle=False, num_workers=4)
+    testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False, download=True, transform=transform_test)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size_test, shuffle=False, num_workers=8)
 
     return trainloader, testloader
 
