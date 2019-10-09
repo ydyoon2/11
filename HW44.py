@@ -108,28 +108,28 @@ class ResNet(nn.Module):
         layers.append(
             block(self.in_channels, out_channels, stride, downsample))
         self.in_channels = out_channels
-        for _ in range(1, duplicates):
+        for _ in range(1, num_blocks):
             layers.append(block(out_channels, out_channels))
 
         return nn.Sequential(*layers)
 
 
     def forward(self, x):
-        out = self.conv1(x)
-        out = self.bn(out)
-        out = self.relu(out)
-        out = self.dropout(out)
+        x = self.conv1(x)
+        x = self.bn(x)
+        x = self.relu(x)
+        x = self.dropout(x)
 
-        out = self.conv2_x(out)
-        out = self.conv3_x(out)
-        out = self.conv4_x(out)
-        out = self.conv5_x(out)
+        x = self.conv2_x(x)
+        x = self.conv3_x(x)
+        x = self.conv4_x(x)
+        x = self.conv5_x(x)
 
-        out = self.maxpool(out)
-        out = out.view(out.size(0), -1)
-        out = self.fc_layer(out)
+        x = self.maxpool(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc_layer(x)
 
-        return out
+        return x
 
 
 def calculate_accuracy(net, loader, is_gpu):
