@@ -98,26 +98,24 @@ class ResNet(nn.Module):
                 nn.init.constant_(m.bias, 0)
                 
     
-    def _make_layer(self, block, planes, blocks, stride=1):
-        
+    def _make_block(self, block, duplicates, out_channels, stride=1):
+
         downsample = None
-        
-        if stride != 1 or self.in_channels != planes * block.expansion: 
-            
+        if (stride != 1) or (self.in_channels != out_channels):
             downsample = nn.Sequential(
-                conv3x3(self.in_channels, planes * block.expansion, stride),
-                nn.BatchNorm2d(planes * block.expansion),
+                conv3x3(self.in_channels, out_channels, stride=stride),
+                nn.BatchNorm2d(num_features=out_channels)
             )
 
         layers = []
-        layers.append(block(self.in_channels, planes, stride, downsample))
-        
-        self.in_channels = planes * block.expansion
-        
-        for _ in range(1, blocks): 
-            layers.append(block(self.in_channels, planes))
+        layers.append(
+            block(self.in_channels, out_channels, stride, downsample))
+        self.in_channels = out_channels
+        for _ in range(1, duplicates):
+            layers.append(block(out_channels, out_channels))
 
         return nn.Sequential(*layers)
+
         
         
     def forward(self, x):
