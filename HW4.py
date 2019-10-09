@@ -9,29 +9,18 @@ import argparse
 import torch.utils.data
 from torch.autograd import Variable
 
-def data_loader(dataroot, batch_size_train, batch_size_test):
-    
-    transform_train = transforms.Compose([transforms.ToTensor(), 
+def data_loader(dataroot, batch_size_train, batch_size_test):    
+    transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
+                                          transforms.RandomVerticalFlip(),
+                                          transforms.ToTensor(), 
                                           transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
     transform_test = transforms.Compose([transforms.ToTensor(), 
                                          transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
-
-    trainset = torchvision.datasets.CIFAR100(root='~/scratch/',
-                                             train=True,
-                                             download=True,
-                                             transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size_train, shuffle=True, num_workers=4)
-
-    testset = torchvision.datasets.CIFAR100(root='~/scratch/',
-                                            train=False,
-                                            download=True,
-                                            transform=transform_test)
-    testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size_test, shuffle=False, num_workers=4)
-
+    trainset = torchvision.datasets.CIFAR100(root='~/scratch/', train=True, download=True, transform=transform_train)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=8)
+    testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False, download=True, transform=transform_test)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size_test, shuffle=False, num_workers=8)
     return trainloader, testloader
-
 
 def initialize_weights(module):
     if isinstance(module, nn.Conv2d):
@@ -42,19 +31,11 @@ def initialize_weights(module):
     elif isinstance(module, nn.Linear):
         module.bias.data.zero_()
 
-
 def conv3x3(in_channels, out_channels, stride=1):
-    return nn.Conv2d(
-        in_channels=in_channels,
-        out_channels=out_channels,
-        kernel_size=3,
-        stride=stride,
-        padding=1,
-        bias=False)
-
+    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
 
 def resnet_cifar(**kwargs):
-    model = ResNet(BasicBlock, [2, 4, 4, 2], **kwargs)
+    model = ResNet(BasicBlock, [2, 4, 4, 2], 100, **kwargs)
     return model
 
 
@@ -63,18 +44,16 @@ class BasicBlock(nn.Module):
         super(BasicBlock, self).__init__()
 
         self.conv1 = conv3x3(in_channels, out_channels, stride)
-        self.bn1 = nn.BatchNorm2d(num_features=out_channels)
+        self.bn1 = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
-
         self.conv2 = conv3x3(out_channels, out_channels)
-        self.bn2 = nn.BatchNorm2d(num_features=out_channels)
+        self.bn2 = nn.BatchNorm2d(out_channels)
 
         self.downsample = downsample
         self.stride = stride
 
-
     def forward(self, x):
-        residual = x
+        identity = x
 
         out = self.conv1(x)
         out = self.bn1(out)
@@ -83,41 +62,41 @@ class BasicBlock(nn.Module):
         out = self.bn2(out)
 
         if self.downsample is not None:
-            residual = self.downsample(x)
+            identity = self.downsample(x)
 
-        out += residual
+        out += identity
+        out = self.relu(out)
+        
         return out
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, duplicates, num_classes=100):
+    def __init__(self, basic_block, num_blocks, num_classes):
         super(ResNet, self).__init__()
 
         self.in_channels = 32
-        self.conv1 = conv3x3(in_channels=3, out_channels=32)
-        self.bn = nn.BatchNorm2d(num_features=32)
+        self.conv1 = conv3x3(3, 32)
+        self.bn1 = nn.BatchNorm2d(32) #feature
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.02)
-
-        self.conv2_x = self._make_block(block, duplicates[0], out_channels=32, stride=1, padding=1)
-        self.conv3_x = self._make_block(block, duplicates[1], out_channels=64, stride=2, padding=1)
-        self.conv4_x = self._make_block(block, duplicates[2], out_channels=128, stride=2, padding=1)
-        self.conv5_x = self._make_block(block, duplicates[3], out_channels=256, stride=2, padding=1)
-
+        
+        self.conv2_x = self._make_block(basic_block, 32, num_blocks[0], stride=1)
+        self.conv3_x = self._make_block(basic_block, 64, num_blocks[1], stride=2)
+        self.conv4_x = self._make_block(basic_block, 128, num_blocks[2], stride=2)
+        self.conv5_x = self._make_block(basic_block, 256, num_blocks[3], stride=2)
+        
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
         self.fc_layer = nn.Linear(256, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal(m.weight.data, mode='fan_out')
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
             elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.Linear):
-                m.bias.data.zero_()
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
 
 
-    def _make_block(self, block, duplicates, out_channels, stride=1, padding = 1):
+    def _make_block(self, basic_block, num_blocks, out_channels, stride=1):
         downsample = None
         if (stride != 1) or (self.in_channels != out_channels):
             downsample = nn.Sequential(
@@ -129,28 +108,28 @@ class ResNet(nn.Module):
         layers.append(
             block(self.in_channels, out_channels, stride, downsample))
         self.in_channels = out_channels
-        for _ in range(1, duplicates):
+        for _ in range(1, num_blocks):
             layers.append(block(out_channels, out_channels))
 
         return nn.Sequential(*layers)
 
 
     def forward(self, x):
-        out = self.conv1(x)
-        out = self.bn(out)
-        out = self.relu(out)
-        out = self.dropout(out)
+        x = self.conv1(x)
+        x = self.bn(x)
+        x = self.relu(x)
+        x = self.dropout(x)
 
-        out = self.conv2_x(out)
-        out = self.conv3_x(out)
-        out = self.conv4_x(out)
-        out = self.conv5_x(out)
+        x = self.conv2_x(x)
+        x = self.conv3_x(x)
+        x = self.conv4_x(x)
+        x = self.conv5_x(x)
 
-        out = self.maxpool(out)
-        out = out.view(out.size(0), -1)
-        out = self.fc_layer(out)
+        x = self.maxpool(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc_layer(x)
 
-        return out
+        return x
 
 
 def calculate_accuracy(net, loader, is_gpu):
@@ -195,7 +174,7 @@ def train(net, criterion, optimizer, trainloader,
 
             optimizer.step()
 
-            running_loss += loss.data[0]
+            running_loss += loss.data
 
         running_loss /= len(trainloader)
 
@@ -204,36 +183,6 @@ def train(net, criterion, optimizer, trainloader,
 
         print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(
             epoch+1, running_loss, train_accuracy, test_accuracy))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 parser = argparse.ArgumentParser()
