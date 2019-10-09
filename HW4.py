@@ -9,18 +9,17 @@ import torch.utils.data
 from torch.autograd import Variable
 import argparse
 
-def data_loader(dataroot, batch_size_train, batch_size_test):    
-    transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
-                                          transforms.RandomVerticalFlip(),
-                                          transforms.ToTensor(), 
-                                          transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
-    transform_test = transforms.Compose([transforms.ToTensor(), 
-                                         transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
-    trainset = torchvision.datasets.CIFAR100(root='~/scratch/', train=True, download=True, transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=8)
-    testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False, download=True, transform=transform_test)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size_test, shuffle=False, num_workers=8)
-    return trainloader, testloader
+ 
+transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
+                                      transforms.RandomVerticalFlip(),
+                                      transforms.ToTensor(), 
+                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
+transform_test = transforms.Compose([transforms.ToTensor(), 
+                                     transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
+trainset = torchvision.datasets.CIFAR100(root='~/scratch/', train=True, download=True, transform=transform_train)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True, num_workers=8)
+testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False, download=True, transform=transform_test)
+testloader = torch.utils.data.DataLoader(testset, batch_size=256, shuffle=False, num_workers=8)
 
 def initialize_weights(module):
     if isinstance(module, nn.Conv2d):
@@ -210,58 +209,37 @@ parser.add_argument('--is_gpu', type=bool, default=True,
 # parse the arguments
 args = parser.parse_args()
 
+start_epoch = 0
 
-def main():
-    """Main pipeline for training ResNet model on CIFAR100 Dataset."""
-    start_epoch = 0
+# resume training from the last time
+if args.resume:
+    # Load checkpoint
+    print('==> Resuming from checkpoint ...')
+    assert os.path.isdir(
+        '~/checkpoint'), 'Error: no checkpoint directory found!'
+    checkpoint = torch.load(args.ckptroot)
+    net = checkpoint['net']
+    start_epoch = checkpoint['epoch']
+else:
+    # start over
+    print('==> Building new ResNet model ...')
+    net = resnet_cifar()
 
-    # resume training from the last time
-    if args.resume:
-        # Load checkpoint
-        print('==> Resuming from checkpoint ...')
-        assert os.path.isdir(
-            '~/checkpoint'), 'Error: no checkpoint directory found!'
-        checkpoint = torch.load(args.ckptroot)
-        net = checkpoint['net']
-        start_epoch = checkpoint['epoch']
-    else:
-        # start over
-        print('==> Building new ResNet model ...')
-        net = resnet_cifar()
+print("==> Initialize CUDA support for ResNet model ...")
 
-    print("==> Initialize CUDA support for ResNet model ...")
+# For training on GPU, we need to transfer net and data onto the GPU
+# http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
+if args.is_gpu:
+    # net = net.cuda()
+    # net = torch.nn.DataParallel(
+    #     net, device_ids=range(torch.cuda.device_count()))
+    net = torch.nn.DataParallel(net).cuda()
+    cudnn.benchmark = True
 
-    # For training on GPU, we need to transfer net and data onto the GPU
-    # http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
-    if args.is_gpu:
-        # net = net.cuda()
-        # net = torch.nn.DataParallel(
-        #     net, device_ids=range(torch.cuda.device_count()))
-        net = torch.nn.DataParallel(net).cuda()
-        cudnn.benchmark = True
-
-    # Loss function, optimizer and scheduler
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(net.parameters(),
-                                lr=args.lr,
-                                momentum=args.momentum,
-                                weight_decay=args.weight_decay)
-
-    # Load CIFAR100
-    trainloader, testloader = data_loader(args.dataroot,
-                                          args.batch_size_train,
-                                          args.batch_size_test)
-
-    # training
-    train(net,
-          criterion,
-          optimizer,
-          trainloader,
-          testloader,
-          start_epoch,
-          args.epochs,
-          args.is_gpu)
+# Loss function, optimizer and scheduler
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
 
-if __name__ == '__main__':
-    main()
+# training
+train(net, criterion, optimizer, trainloader, testloader, start_epoch, args.epochs, args.is_gpu)
