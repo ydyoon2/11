@@ -70,33 +70,41 @@ class BasicBlock(nn.Module):
         return out
 
 
+
 class ResNet(nn.Module):
-    def __init__(self, basic_block, num_blocks, num_classes):
+    """Residual Neural Network."""
+
+    def __init__(self, block, duplicates, num_classes=100):
+        """Residual Neural Network Builder."""
         super(ResNet, self).__init__()
 
         self.in_channels = 32
-        self.conv1 = conv3x3(3, 32)
-        self.bn1 = nn.BatchNorm2d(32) #feature
+        self.conv1 = conv3x3(in_channels=3, out_channels=32)
+        self.bn = nn.BatchNorm2d(num_features=32)
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.02)
-        
-        self.conv2_x = self._make_block(basic_block, 32, num_blocks[0], stride=1)
-        self.conv3_x = self._make_block(basic_block, 64, num_blocks[1], stride=2)
-        self.conv4_x = self._make_block(basic_block, 128, num_blocks[2], stride=2)
-        self.conv5_x = self._make_block(basic_block, 256, num_blocks[3], stride=2)
-        
+
+        # block of Basic Blocks
+        self.conv2_x = self._make_block(block, duplicates[0], out_channels=32, stride=1, padding=1)
+        self.conv3_x = self._make_block(block, duplicates[1], out_channels=64, stride=2, padding=1)
+        self.conv4_x = self._make_block(block, duplicates[2], out_channels=128, stride=2, padding=1)
+        self.conv5_x = self._make_block(block, duplicates[3], out_channels=256, stride=2, padding=1)
+
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
         self.fc_layer = nn.Linear(256, num_classes)
 
+        # initialize weights
+        # self.apply(initialize_weights)
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_normal(m.weight.data, mode='fan_out')
             elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                m.bias.data.zero_()
 
-
-    def _make_block(self, basic_block, num_blocks, out_channels, stride=1):
+    def _make_block(self, block, duplicates, out_channels, stride=1, padding = 1):
         downsample = None
         if (stride != 1) or (self.in_channels != out_channels):
             downsample = nn.Sequential(
@@ -106,30 +114,31 @@ class ResNet(nn.Module):
 
         layers = []
         layers.append(
-            basic_block(self.in_channels, out_channels, stride, downsample))
+            block(self.in_channels, out_channels, stride, downsample))
         self.in_channels = out_channels
-        for _ in range(1, num_blocks):
-            layers.append(basic_block(out_channels, out_channels))
+        for _ in range(1, duplicates):
+            layers.append(block(out_channels, out_channels))
 
         return nn.Sequential(*layers)
 
-
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.dropout(x)
+        """Forward pass of ResNet."""
+        out = self.conv1(x)
+        out = self.bn(out)
+        out = self.relu(out)
+        out = self.dropout(out)
 
-        x = self.conv2_x(x)
-        x = self.conv3_x(x)
-        x = self.conv4_x(x)
-        x = self.conv5_x(x)
+        # Stacked Basic Blocks
+        out = self.conv2_x(out)
+        out = self.conv3_x(out)
+        out = self.conv4_x(out)
+        out = self.conv5_x(out)
 
-        x = self.maxpool(x)
-        #x = x.view(x.size(0), -1)
-        x = self.fc_layer(x)
+        out = self.maxpool(out)
+        out = out.view(out.size(0), -1)
+        out = self.fc_layer(out)
 
-        return x
+        return out
 
 
 def calculate_accuracy(net, loader, is_gpu):
