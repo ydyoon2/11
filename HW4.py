@@ -10,17 +10,11 @@ import torch.utils.data
 from torch.autograd import Variable
 
 def data_loader(dataroot, batch_size_train, batch_size_test):
-    transform_train = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276])
-    ])
-
-    transform_test = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276])
-    ])
+    
+    transform_train = transforms.Compose([transforms.ToTensor(), 
+                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
+    transform_test = transforms.Compose([transforms.ToTensor(),
+                                     transforms.Normalize((0.4914, 0.48216, 0.44653)
 
     trainset = torchvision.datasets.CIFAR100(root='~/scratch/',
                                              train=True,
