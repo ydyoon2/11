@@ -6,7 +6,6 @@ import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import torch.utils.data
 from torch.autograd import Variable
-import argparse
 
 # CIFAR100
 transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
@@ -176,22 +175,10 @@ def train(net, criterion, optimizer, trainloader, testloader, start_epoch, epoch
 
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
-
-
-
 start_epoch = 0
-
-
-print('==> Building new ResNet model ...')
 net = resnet_cifar()
-
-print("==> Initialize CUDA support for ResNet model ...")
-
-
 net = torch.nn.DataParallel(net).cuda()
 cudnn.benchmark = True
-
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-5)
-
 train(net, criterion, optimizer, trainloader, testloader, start_epoch, 50)
