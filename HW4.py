@@ -115,19 +115,6 @@ class ResNet(nn.Module):
 def conv3x3(in_channels, out_channels, stride=1):
     return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
 
-def resnet_cifar():
-    model = ResNet(BasicBlock, [2, 4, 4, 2], 100)
-    return model
-
-def initialize_weights(module):
-    if isinstance(module, nn.Conv2d):
-        nn.init.xavier_normal(module.weight.data)
-    elif isinstance(module, nn.BatchNorm2d):
-        module.weight.data.fill_(1)
-        module.bias.data.zero_()
-    elif isinstance(module, nn.Linear):
-        module.bias.data.zero_()
-
 def accuracy(net, loader):
     correct = 0.
     total = 0.
@@ -164,9 +151,8 @@ def train(net, criterion, optimizer, trainloader, testloader, epochs):
         test_accuracy = accuracy(net, testloader)
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
-net = resnet_cifar()
-net = torch.nn.DataParallel(net).cuda()
-cudnn.benchmark = True
+resnet = ResNet(BasicBlock, [2, 4, 4, 2], 100)
+resnet = torch.nn.DataParallel(resnet).cuda()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0001)
-train(net, criterion, optimizer, trainloader, testloader, 50)
+optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0001)
+train(resnet, criterion, optimizer, trainloader, testloader, 50)
