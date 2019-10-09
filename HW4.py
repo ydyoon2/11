@@ -20,22 +20,6 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True
 testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False, download=True, transform=transform_test)
 testloader = torch.utils.data.DataLoader(testset, batch_size=256, shuffle=False, num_workers=8)
 
-def conv3x3(in_channels, out_channels, stride=1):
-    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
-
-def resnet_cifar(**kwargs):
-    model = ResNet(BasicBlock, [2, 4, 4, 2], 100, **kwargs)
-    return model
-
-def initialize_weights(module):
-    if isinstance(module, nn.Conv2d):
-        nn.init.xavier_normal(module.weight.data)
-    elif isinstance(module, nn.BatchNorm2d):
-        module.weight.data.fill_(1)
-        module.bias.data.zero_()
-    elif isinstance(module, nn.Linear):
-        module.bias.data.zero_()
-
 class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
@@ -127,6 +111,21 @@ class ResNet(nn.Module):
 
         return out
 
+def conv3x3(in_channels, out_channels, stride=1):
+    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+
+def resnet_cifar():
+    model = ResNet(BasicBlock, [2, 4, 4, 2], 100)
+    return model
+
+def initialize_weights(module):
+    if isinstance(module, nn.Conv2d):
+        nn.init.xavier_normal(module.weight.data)
+    elif isinstance(module, nn.BatchNorm2d):
+        module.weight.data.fill_(1)
+        module.bias.data.zero_()
+    elif isinstance(module, nn.Linear):
+        module.bias.data.zero_()
 
 def calculate_accuracy(net, loader):
     correct = 0.
@@ -178,34 +177,7 @@ def train(net, criterion, optimizer, trainloader, testloader, start_epoch, epoch
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
 
-parser = argparse.ArgumentParser()
 
-# directory
-parser.add_argument('--dataroot', type=str,
-                    default="../data", help='path to dataset')
-parser.add_argument('--ckptroot', type=str,
-                    default="../checkpoint/ckpt.t7", help='path to checkpoint')
-
-# hyperparameters settings
-parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
-parser.add_argument('--momentum', type=float,
-                    default=0.9, help='momentum factor')
-parser.add_argument('--weight_decay', type=float,
-                    default=1e-5, help='weight decay (L2 penalty)')
-parser.add_argument('--epochs', type=int, default=500,
-                    help='number of epochs to train')
-parser.add_argument('--batch_size_train', type=int,
-                    default=256, help='training set input batch size')
-parser.add_argument('--batch_size_test', type=int,
-                    default=256, help='test set input batch size')
-
-# training settings
-parser.add_argument('--resume', type=bool, default=False,
-                    help='whether re-training from ckpt')
-
-
-# parse the arguments
-args = parser.parse_args()
 
 start_epoch = 0
 
@@ -220,6 +192,6 @@ net = torch.nn.DataParallel(net).cuda()
 cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+optimizer = torch.optim.SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-5)
 
-train(net, criterion, optimizer, trainloader, testloader, start_epoch, args.epochs)
+train(net, criterion, optimizer, trainloader, testloader, start_epoch, 50)
