@@ -35,7 +35,7 @@ def conv3x3(in_channels, out_channels, stride=1):
     return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
 
 def resnet_cifar(**kwargs):
-    model = ResNet(BasicBlock, [2, 4, 4, 2], **kwargs)
+    model = ResNet(BasicBlock, [2, 4, 4, 2], 100, **kwargs)
     return model
 
 
