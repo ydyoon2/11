@@ -9,23 +9,18 @@ import argparse
 import torch.utils.data
 from torch.autograd import Variable
 
-def data_loader(dataroot, batch_size_train, batch_size_test):
-    
+def data_loader(dataroot, batch_size_train, batch_size_test):    
     transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
                                           transforms.RandomVerticalFlip(),
                                           transforms.ToTensor(), 
                                           transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
     transform_test = transforms.Compose([transforms.ToTensor(), 
                                          transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
-
     trainset = torchvision.datasets.CIFAR100(root='~/scratch/', train=True, download=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=8)
-
     testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size_test, shuffle=False, num_workers=8)
-
     return trainloader, testloader
-
 
 def initialize_weights(module):
     if isinstance(module, nn.Conv2d):
@@ -36,15 +31,9 @@ def initialize_weights(module):
     elif isinstance(module, nn.Linear):
         module.bias.data.zero_()
 
-
 def conv3x3(in_channels, out_channels, stride=1):
-    return nn.Conv2d(
-        in_channels=in_channels,
-        out_channels=out_channels,
-        kernel_size=3,
-        stride=stride,
-        padding=1,
-        bias=False)
+    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1,
+                     bias=False)
 
 
 def resnet_cifar(**kwargs):
@@ -57,18 +46,16 @@ class BasicBlock(nn.Module):
         super(BasicBlock, self).__init__()
 
         self.conv1 = conv3x3(in_channels, out_channels, stride)
-        self.bn1 = nn.BatchNorm2d(num_features=out_channels)
+        self.bn1 = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
-
         self.conv2 = conv3x3(out_channels, out_channels)
-        self.bn2 = nn.BatchNorm2d(num_features=out_channels)
+        self.bn2 = nn.BatchNorm2d(out_channels)
 
         self.downsample = downsample
         self.stride = stride
 
-
     def forward(self, x):
-        residual = x
+        identity = x
 
         out = self.conv1(x)
         out = self.bn1(out)
@@ -77,9 +64,11 @@ class BasicBlock(nn.Module):
         out = self.bn2(out)
 
         if self.downsample is not None:
-            residual = self.downsample(x)
+            identity = self.downsample(x)
 
-        out += residual
+        out += identity
+        out = self.relu(out)
+        
         return out
 
 
@@ -189,7 +178,7 @@ def train(net, criterion, optimizer, trainloader,
 
             optimizer.step()
 
-            running_loss += loss.data[0]
+            running_loss += loss.data
 
         running_loss /= len(trainloader)
 
@@ -198,36 +187,6 @@ def train(net, criterion, optimizer, trainloader,
 
         print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(
             epoch+1, running_loss, train_accuracy, test_accuracy))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 parser = argparse.ArgumentParser()
