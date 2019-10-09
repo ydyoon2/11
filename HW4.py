@@ -19,6 +19,7 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True
 testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False, download=True, transform=transform_test)
 testloader = torch.utils.data.DataLoader(testset, batch_size=256, shuffle=False, num_workers=8)
 
+# BasicBlock
 class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
@@ -49,6 +50,7 @@ class BasicBlock(nn.Module):
         
         return out
 
+# ResNet
 class ResNet(nn.Module):
     def __init__(self, basic_block, num_blocks, num_classes=100):
         super(ResNet, self).__init__()
@@ -126,7 +128,7 @@ def initialize_weights(module):
     elif isinstance(module, nn.Linear):
         module.bias.data.zero_()
 
-def calculate_accuracy(net, loader):
+def accuracy(net, loader):
     correct = 0.
     total = 0.
 
@@ -143,42 +145,28 @@ def calculate_accuracy(net, loader):
 
     return 100 * correct / total
 
-def train(net, criterion, optimizer, trainloader, testloader, start_epoch, epochs):
-
-    for epoch in range(start_epoch, epochs + start_epoch):
-
+def train(net, criterion, optimizer, trainloader, testloader, epochs):
+    for epoch in range(epochs):
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
-
             inputs, labels = data
-
-
             inputs = inputs.cuda()
             labels = labels.cuda()
-
             inputs, labels = Variable(inputs), Variable(labels)
-
             outputs = net(inputs)
             loss = criterion(outputs, labels)
-
             optimizer.zero_grad()
             loss.backward()
-
             optimizer.step()
-
             running_loss += loss.data
-
         running_loss /= len(trainloader)
-
-        train_accuracy = calculate_accuracy(net, trainloader)
-        test_accuracy = calculate_accuracy(net, testloader)
-
+        train_accuracy = accuracy(net, trainloader)
+        test_accuracy = accuracy(net, testloader)
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
-start_epoch = 0
 net = resnet_cifar()
 net = torch.nn.DataParallel(net).cuda()
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-5)
-train(net, criterion, optimizer, trainloader, testloader, start_epoch, 50)
+optimizer = torch.optim.SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0001)
+train(net, criterion, optimizer, trainloader, testloader, 50)
