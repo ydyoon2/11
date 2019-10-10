@@ -151,9 +151,8 @@ def train(net, criterion, optimizer, trainloader, testloader, epochs):
         test_accuracy = accuracy(net, testloader)
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
-net = ResNet(BasicBlock, [2, 4, 4, 2], 100)
-net = torch.nn.DataParallel(net).cuda()
-cudnn.benchmark = True
+resnet = ResNet(BasicBlock, [2, 4, 4, 2], 100)
+resnet = torch.nn.DataParallel(resnet).cuda()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0001)
-train(net, criterion, optimizer, trainloader, testloader, 50)
+optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
+train(resnet, criterion, optimizer, trainloader, testloader, 50)
