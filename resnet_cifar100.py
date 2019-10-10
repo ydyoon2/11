@@ -10,6 +10,7 @@ from torch.autograd import Variable
 # CIFAR100
 transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
                                       transforms.RandomVerticalFlip(),
+                                      transforms.RandomHorizontalFlip(),
                                       transforms.ToTensor(), 
                                       transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 transform_test = transforms.Compose([transforms.ToTensor(), 
@@ -153,6 +154,7 @@ def train(net, criterion, optimizer, trainloader, testloader, epochs):
 
 resnet = ResNet(BasicBlock, [2, 4, 4, 2], 100)
 resnet = torch.nn.DataParallel(resnet).cuda()
+cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
-train(resnet, criterion, optimizer, trainloader, testloader, 100)
+train(resnet, criterion, optimizer, trainloader, testloader, 50)
