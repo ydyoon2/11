@@ -108,7 +108,7 @@ class BasicBlock(nn.Module):
 
 # ResNet
 class ResNet(nn.Module):
-    def __init__(self, basic_block, num_blocks, num_classes=100):
+    def __init__(self, basic_block, num_blocks, num_classes=200):
         super(ResNet, self).__init__()
 
         self.in_channels = 32
@@ -208,8 +208,7 @@ def train(resnet, criterion, optimizer, train_loader, val_loader, epochs):
         test_accuracy = accuracy(resnet, val_loader)
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
-torch.backends.cudnn.enabled = False
-resnet = ResNet(BasicBlock, [2, 4, 4, 2], 100)
+resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
 resnet = torch.nn.DataParallel(resnet).cuda()
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
