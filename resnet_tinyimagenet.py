@@ -212,4 +212,4 @@ resnet = torch.nn.DataParallel(resnet).cuda()
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
-train(resnet, criterion, optimizer, trainloader, testloader, 50)
+train(resnet, criterion, optimizer, train_loader, val_loader, 50)
