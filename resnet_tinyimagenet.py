@@ -195,7 +195,7 @@ def train(resnet, criterion, optimizer, train_loader, val_loader, epochs):
             inputs, labels = data
             inputs = inputs.cuda()
             labels = labels.cuda()
-            inputs, labels = Variable(inputs), Variable(labels)
+            #inputs, labels = Variable(inputs), Variable(labels)
             optimizer.zero_grad()
             outputs = resnet(inputs)
             _, preds = torch.max(outputs, 1)
