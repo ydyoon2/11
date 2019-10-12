@@ -197,6 +197,7 @@ def train(net, criterion, optimizer, train_loader, val_loader, epochs):
             labels = labels.cuda()
             inputs, labels = Variable(inputs), Variable(labels)
             outputs = net(inputs)
+            _, preds = torch.max(outputs, 1)
             loss = criterion(outputs, labels)
             optimizer.zero_grad()
             loss.backward()
