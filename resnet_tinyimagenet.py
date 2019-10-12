@@ -195,7 +195,7 @@ def train(resnet, criterion, optimizer, train_loader, val_loader, epochs):
             inputs, labels = data
             inputs = inputs.cuda()
             labels = labels.cuda()
-            #inputs, labels = Variable(inputs), Variable(labels)
+            inputs, labels = Variable(inputs), Variable(labels)
             optimizer.zero_grad()
             outputs = resnet(inputs)
             _, preds = torch.max(outputs, 1)
@@ -208,6 +208,7 @@ def train(resnet, criterion, optimizer, train_loader, val_loader, epochs):
         test_accuracy = accuracy(resnet, val_loader)
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
+torch.backends.cudnn.enabled = False
 resnet = ResNet(BasicBlock, [2, 4, 4, 2], 100)
 resnet = torch.nn.DataParallel(resnet).cuda()
 cudnn.benchmark = True
