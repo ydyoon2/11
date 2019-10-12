@@ -1,23 +1,79 @@
 import torch
-import torchvision
 import torch.optim
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import torch.utils.data
 from torch.autograd import Variable
+import os
+import torchvision.datasets as datasets
 
-# CIFAR100
+# TinyImageNet
+def create_val_folder(val_dir):
+    """
+    This method is responsible for separating validation
+    images into separate sub folders
+    """
+    # path where validation data is present now
+    path = os.path.join(val_dir, 'images')
+    # file where image2class mapping is present
+    filename = os.path.join(val_dir, 'val_annotations.txt')
+    fp = open(filename, "r") # open file in read mode
+    data = fp.readlines() # read line by line
+    """
+    Create a dictionary with image names as key and
+    corresponding classes as values
+    """
+    val_img_dict = {}
+    for line in data:
+        words = line.split("\t")
+        val_img_dict[words[0]] = words[1]
+    fp.close()
+    # Create folder if not present, and move image into proper folder
+    for img, folder in val_img_dict.items():
+        newpath = (os.path.join(path, folder))
+        if not os.path.exists(newpath): # check if folder exists
+            os.makedirs(newpath)
+        # Check if image exists in default directory
+        if os.path.exists(os.path.join(path, img)):
+            os.rename(os.path.join(path, img), os.path.join(newpath, img))
+    return
+
 transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
                                       transforms.RandomVerticalFlip(),
+                                      transforms.RandomHorizontalFlip(),
                                       transforms.ToTensor(), 
                                       transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 transform_test = transforms.Compose([transforms.ToTensor(), 
                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
-trainset = torchvision.datasets.CIFAR100(root='~/scratch/', train=True, download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True, num_workers=8)
-testset = torchvision.datasets.CIFAR100(root='~/scratch/', train=False, download=True, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=256, shuffle=False, num_workers=8)
+
+train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train'
+train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
+#print(train_dataset.class_to_idx)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=8)
+val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/'
+
+
+if 'val_' in os.listdir(val_dir+'images/')[0]:
+    create_val_folder(val_dir)
+    val_dir = val_dir+'images/'
+else:
+    val_dir = val_dir+'images/'
+
+
+val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
+# To check the index for each classes
+# print(val_dataset.class_to_idx)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=8)
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+for images, labels in train_loader:
+    images = Variable(images).to(device)
+    labels = Variable(labels).to(device)
+for images, labels in val_loader:
+    images = Variable(images).to(device)
+    labels = Variable(labels).to(device)
+    
 
 # BasicBlock
 class BasicBlock(nn.Module):
@@ -151,9 +207,9 @@ def train(net, criterion, optimizer, trainloader, testloader, epochs):
         test_accuracy = accuracy(net, testloader)
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
-net = ResNet(BasicBlock, [2, 4, 4, 2], 100)
-net = torch.nn.DataParallel(net).cuda()
+resnet = ResNet(BasicBlock, [2, 4, 4, 2], 100)
+resnet = torch.nn.DataParallel(resnet).cuda()
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0005)
-train(net, criterion, optimizer, trainloader, testloader, 50)
+optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
+train(resnet, criterion, optimizer, trainloader, testloader, 50)
