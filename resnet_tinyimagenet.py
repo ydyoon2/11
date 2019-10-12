@@ -188,10 +188,10 @@ def accuracy(net, loader):
 
     return 100 * correct / total
 
-def train(net, criterion, optimizer, trainloader, testloader, epochs):
+def train(net, criterion, optimizer, train_loader, val_loader, epochs):
     for epoch in range(epochs):
         running_loss = 0.0
-        for i, data in enumerate(trainloader, 0):
+        for i, data in enumerate(train_loader, 0):
             inputs, labels = data
             inputs = inputs.cuda()
             labels = labels.cuda()
@@ -202,9 +202,9 @@ def train(net, criterion, optimizer, trainloader, testloader, epochs):
             loss.backward()
             optimizer.step()
             running_loss += loss.data
-        running_loss /= len(trainloader)
-        train_accuracy = accuracy(net, trainloader)
-        test_accuracy = accuracy(net, testloader)
+        running_loss /= len(train_loader)
+        train_accuracy = accuracy(net, train_loader)
+        test_accuracy = accuracy(net, val_loader)
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
 resnet = ResNet(BasicBlock, [2, 4, 4, 2], 100)
