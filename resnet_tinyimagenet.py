@@ -47,7 +47,7 @@ transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
 transform_test = transforms.Compose([transforms.ToTensor(), 
                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 
-val_dir = '/u/training/instr030/scratch/tiny-imagenet-200/val/'
+val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/'
 
 
 if 'val_' in os.listdir(val_dir+'images/')[0]:
