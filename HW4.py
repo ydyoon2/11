@@ -44,10 +44,7 @@ def create_val_folder(val_dir):
     return
 
 
-transform_train = transforms.Compose([transforms.RandomCrop(size=64, padding=4),
-                                      transforms.RandomVerticalFlip(),
-                                      transforms.RandomHorizontalFlip(),
-                                      transforms.ToTensor(), 
+transform_train = transforms.Compose([transforms.ToTensor(), 
                                       transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 transform_test = transforms.Compose([transforms.ToTensor(), 
                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
@@ -197,6 +194,7 @@ class ResNet(nn.Module):
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.dropout = nn.Dropout2d(p=0.1)
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
                                        dilate=replace_stride_with_dilation[0])
@@ -252,6 +250,7 @@ class ResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
+        x = self.dropout(x)
         x = self.maxpool(x)
 
         x = self.layer1(x)
