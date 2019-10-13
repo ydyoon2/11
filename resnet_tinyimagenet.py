@@ -117,7 +117,8 @@ class ResNet(nn.Module):
         self.conv4_x = self._make_block(basic_block, num_blocks[2], out_channels=256, stride=2, padding=1)
         self.conv5_x = self._make_block(basic_block, num_blocks[3], out_channels=512, stride=2, padding=1)
 
-        self.maxpool = nn.MaxPool2d(kernel_size=20, stride=1)
+        self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
+        self.maxpool_2 = nn.MaxPool2d(kernel_size=5, stride=1)
         self.fc_layer = nn.Linear(512, num_classes)
 
         for m in self.modules():
@@ -158,6 +159,7 @@ class ResNet(nn.Module):
         out = self.conv5_x(out)
 
         out = self.maxpool(out)
+        out = self.maxpool_2(out)
         out = out.view(out.size(0), -1)
         out = self.fc_layer(out)
 
