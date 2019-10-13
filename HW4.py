@@ -39,6 +39,7 @@ def create_val_folder(val_dir):
             os.rename(os.path.join(path, img), os.path.join(newpath, img))
     return
 
+
 transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
                                       transforms.RandomVerticalFlip(),
                                       transforms.RandomHorizontalFlip(),
@@ -49,22 +50,16 @@ transform_test = transforms.Compose([transforms.ToTensor(),
 
 train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train'
 train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
-#print(train_dataset.class_to_idx)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=8)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=8)
+
 val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/'
-
-
 if 'val_' in os.listdir(val_dir+'images/')[0]:
     create_val_folder(val_dir)
     val_dir = val_dir+'images/'
 else:
     val_dir = val_dir+'images/'
-
-
 val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
-# To check the index for each classes
-# print(val_dataset.class_to_idx)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=8)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=8)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 for images, labels in train_loader:
@@ -108,22 +103,22 @@ class BasicBlock(nn.Module):
 
 # ResNet
 class ResNet(nn.Module):
-    def __init__(self, basic_block, num_blocks, num_classes=100):
+    def __init__(self, basic_block, num_blocks, num_classes=200):
         super(ResNet, self).__init__()
 
-        self.in_channels = 32
-        self.conv1 = conv3x3(in_channels=3, out_channels=32)
-        self.bn = nn.BatchNorm2d(num_features=32)
+        self.in_channels = 64
+        self.conv1 = conv3x3(in_channels=3, out_channels=64)
+        self.bn = nn.BatchNorm2d(num_features=64)
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.02)
 
-        self.conv2_x = self._make_block(basic_block, num_blocks[0], out_channels=32, stride=1, padding=1)
-        self.conv3_x = self._make_block(basic_block, num_blocks[1], out_channels=64, stride=2, padding=1)
-        self.conv4_x = self._make_block(basic_block, num_blocks[2], out_channels=128, stride=2, padding=1)
-        self.conv5_x = self._make_block(basic_block, num_blocks[3], out_channels=256, stride=2, padding=1)
+        self.conv2_x = self._make_block(basic_block, num_blocks[0], out_channels=64, stride=1, padding=1)
+        self.conv3_x = self._make_block(basic_block, num_blocks[1], out_channels=128, stride=2, padding=1)
+        self.conv4_x = self._make_block(basic_block, num_blocks[2], out_channels=256, stride=2, padding=1)
+        self.conv5_x = self._make_block(basic_block, num_blocks[3], out_channels=512, stride=2, padding=1)
 
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
-        self.fc_layer = nn.Linear(256, num_classes)
+        self.fc_layer = nn.Linear(512*5, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -188,28 +183,29 @@ def accuracy(net, loader):
 
     return 100 * correct / total
 
-def train(net, criterion, optimizer, trainloader, testloader, epochs):
+def train(resnet, criterion, optimizer, train_loader, val_loader, epochs):
     for epoch in range(epochs):
         running_loss = 0.0
-        for i, data in enumerate(trainloader, 0):
+        for i, data in enumerate(train_loader, 0):
             inputs, labels = data
             inputs = inputs.cuda()
             labels = labels.cuda()
             inputs, labels = Variable(inputs), Variable(labels)
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
             optimizer.zero_grad()
+            outputs = resnet(inputs)
+            _, preds = torch.max(outputs, 1)
+            loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
             running_loss += loss.data
-        running_loss /= len(trainloader)
-        train_accuracy = accuracy(net, trainloader)
-        test_accuracy = accuracy(net, testloader)
+        running_loss /= len(train_loader)
+        train_accuracy = accuracy(resnet, train_loader)
+        test_accuracy = accuracy(resnet, val_loader)
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
-resnet = ResNet(BasicBlock, [2, 4, 4, 2], 100)
+resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
 resnet = torch.nn.DataParallel(resnet).cuda()
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
-train(resnet, criterion, optimizer, trainloader, testloader, 50)
+train(resnet, criterion, optimizer, train_loader, val_loader, 50)
