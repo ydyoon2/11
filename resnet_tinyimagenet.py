@@ -118,7 +118,7 @@ class ResNet(nn.Module):
         self.conv5_x = self._make_block(basic_block, num_blocks[3], out_channels=512, stride=2, padding=1)
 
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
-        self.fc_layer = nn.Linear(512*5, num_classes)
+        self.fc_layer = nn.Linear(512, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
