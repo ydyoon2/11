@@ -158,6 +158,7 @@ class ResNet(nn.Module):
         out = self.conv5_x(out)
 
         out = self.maxpool(out)
+        out = self.maxpool(out)
         out = out.view(out.size(0), -1)
         out = self.fc_layer(out)
 
