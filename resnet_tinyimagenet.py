@@ -40,7 +40,7 @@ def create_val_folder(val_dir):
     return
 
 
-transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
+transform_train = transforms.Compose([transforms.RandomCrop(size=64, padding=4),
                                       transforms.RandomVerticalFlip(),
                                       transforms.RandomHorizontalFlip(),
                                       transforms.ToTensor(), 
@@ -50,7 +50,7 @@ transform_test = transforms.Compose([transforms.ToTensor(),
 
 train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train'
 train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=8)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=8)
 
 val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/'
 if 'val_' in os.listdir(val_dir+'images/')[0]:
@@ -59,7 +59,7 @@ if 'val_' in os.listdir(val_dir+'images/')[0]:
 else:
     val_dir = val_dir+'images/'
 val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=8)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=8)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 for images, labels in train_loader:
@@ -118,7 +118,7 @@ class ResNet(nn.Module):
         self.conv5_x = self._make_block(basic_block, num_blocks[3], out_channels=512, stride=2, padding=1)
 
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
-        self.fc_layer = nn.Linear(512*25, num_classes)
+        self.fc_layer = nn.Linear(512, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
