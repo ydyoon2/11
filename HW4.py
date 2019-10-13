@@ -6,19 +6,9 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-
 import argparse
-
-#from resnet import resnet_cifar
-
-
-
 import torch.utils.data
-
-
 from torch.autograd import Variable
-
-
 
 def initialize_weights(module):
     """Initialize weights."""
@@ -30,7 +20,6 @@ def initialize_weights(module):
     elif isinstance(module, nn.Linear):
         module.bias.data.zero_()
 
-
 def conv3x3(in_channels, out_channels, stride=1):
     """3x3 kernel size with padding convolutional layer in ResNet BasicBlock."""
     return nn.Conv2d(
@@ -41,12 +30,10 @@ def conv3x3(in_channels, out_channels, stride=1):
         padding=1,
         bias=False)
 
-
 def resnet_cifar(**kwargs):
     """Initialize ResNet model."""
     model = ResNet(BasicBlock, [2, 4, 4, 2], **kwargs)
     return model
-
 
 class BasicBlock(nn.Module):
     """Basic Block of ReseNet."""
@@ -98,9 +85,9 @@ class ResNet(nn.Module):
         """Residual Neural Network Builder."""
         super(ResNet, self).__init__()
 
-        self.in_channels = 32
-        self.conv1 = conv3x3(in_channels=3, out_channels=32)
-        self.bn = nn.BatchNorm2d(num_features=32)
+        self.in_channels = 64
+        self.conv1 = conv3x3(in_channels=3, out_channels=64)
+        self.bn = nn.BatchNorm2d(num_features=64)
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.02)
 
@@ -111,6 +98,7 @@ class ResNet(nn.Module):
         self.conv5_x = self._make_block(block, duplicates[3], out_channels=512, stride=2, padding=1)
 
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
+        self.maxpool_2 = nn.MaxPool2d(kernel_size=5, stride=1)
         self.fc_layer = nn.Linear(512, num_classes)
 
         # initialize weights
@@ -166,6 +154,7 @@ class ResNet(nn.Module):
         out = self.conv5_x(out)
 
         out = self.maxpool(out)
+        out = self.maxpool_2(out)
         out = out.view(out.size(0), -1)
         out = self.fc_layer(out)
 
@@ -333,36 +322,6 @@ def train(net, criterion, optimizer, trainloader,
             torch.save(state, '../checkpoint/ckpt.t7')
 
     print('==> Finished Training ...')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 parser = argparse.ArgumentParser()
