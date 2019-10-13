@@ -5,6 +5,7 @@ import torch.optim
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
+import torchvision.datasets as datasets
 
 import argparse
 
@@ -93,7 +94,7 @@ class BasicBlock(nn.Module):
 class ResNet(nn.Module):
     """Residual Neural Network."""
 
-    def __init__(self, block, duplicates, num_classes=100):
+    def __init__(self, block, duplicates, num_classes=200):
         """Residual Neural Network Builder."""
         super(ResNet, self).__init__()
 
@@ -104,19 +105,19 @@ class ResNet(nn.Module):
         self.dropout = nn.Dropout2d(p=0.02)
 
         # block of Basic Blocks
-        self.conv2_x = self._make_block(block, duplicates[0], out_channels=32, stride=1, padding=1)
-        self.conv3_x = self._make_block(block, duplicates[1], out_channels=64, stride=2, padding=1)
-        self.conv4_x = self._make_block(block, duplicates[2], out_channels=128, stride=2, padding=1)
-        self.conv5_x = self._make_block(block, duplicates[3], out_channels=256, stride=2, padding=1)
+        self.conv2_x = self._make_block(block, duplicates[0], out_channels=64, stride=1, padding=1)
+        self.conv3_x = self._make_block(block, duplicates[1], out_channels=128, stride=2, padding=1)
+        self.conv4_x = self._make_block(block, duplicates[2], out_channels=256, stride=2, padding=1)
+        self.conv5_x = self._make_block(block, duplicates[3], out_channels=512, stride=2, padding=1)
 
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
-        self.fc_layer = nn.Linear(256, num_classes)
+        self.fc_layer = nn.Linear(512, num_classes)
 
         # initialize weights
         # self.apply(initialize_weights)
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal(m.weight.data, mode='fan_out')
+                nn.init.kaiming_normal_(m.weight.data, mode='fan_out')
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
@@ -173,69 +174,66 @@ class ResNet(nn.Module):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def data_loader(dataroot, batch_size_train, batch_size_test):
+# TinyImageNet
+def create_val_folder(val_dir):
     """
-    Data Loader for CIFAR100 Dataset.
-
-    Args:
-        dataroot: data root directory
-        batch_size_train: mini-Batch size of training set
-        batch_size_test: mini-Batch size of test set
-
-    Returns:
-        trainloader: training set loader
-        testloader: test set loader
+    This method is responsible for separating validation
+    images into separate sub folders
     """
-    # Data Augmentation
-    print("==> Data Augmentation ...")
+    # path where validation data is present now
+    path = os.path.join(val_dir, 'images')
+    # file where image2class mapping is present
+    filename = os.path.join(val_dir, 'val_annotations.txt')
+    fp = open(filename, "r") # open file in read mode
+    data = fp.readlines() # read line by line
+    """
+    Create a dictionary with image names as key and
+    corresponding classes as values
+    """
+    val_img_dict = {}
+    for line in data:
+        words = line.split("\t")
+        val_img_dict[words[0]] = words[1]
+    fp.close()
+    # Create folder if not present, and move image into proper folder
+    for img, folder in val_img_dict.items():
+        newpath = (os.path.join(path, folder))
+        if not os.path.exists(newpath): # check if folder exists
+            os.makedirs(newpath)
+        # Check if image exists in default directory
+        if os.path.exists(os.path.join(path, img)):
+            os.rename(os.path.join(path, img), os.path.join(newpath, img))
+    return
 
-    # Normalize training set together with augmentation
-    transform_train = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276])
-    ])
 
-    # Normalize test set same as training set without augmentation
-    transform_test = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276])
-    ])
+transform_train = transforms.Compose([transforms.RandomCrop(size=64, padding=4),
+                                      transforms.RandomVerticalFlip(),
+                                      transforms.RandomHorizontalFlip(),
+                                      transforms.ToTensor(), 
+                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
+transform_test = transforms.Compose([transforms.ToTensor(), 
+                                     transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
 
-    # Loading CIFAR100
-    print("==> Preparing CIFAR100 dataset ...")
+train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train'
+train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=8)
 
-    trainset = torchvision.datasets.CIFAR100(root='~/scratch/',
-                                             train=True,
-                                             download=True,
-                                             transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size_train, shuffle=True, num_workers=4)
+val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/'
+if 'val_' in os.listdir(val_dir+'images/')[0]:
+    create_val_folder(val_dir)
+    val_dir = val_dir+'images/'
+else:
+    val_dir = val_dir+'images/'
+val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=8)
 
-    testset = torchvision.datasets.CIFAR100(root='~/scratch/',
-                                            train=False,
-                                            download=True,
-                                            transform=transform_test)
-    testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size_test, shuffle=False, num_workers=4)
-
-    return trainloader, testloader
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+for images, labels in train_loader:
+    images = Variable(images).to(device)
+    labels = Variable(labels).to(device)
+for images, labels in val_loader:
+    images = Variable(images).to(device)
+    labels = Variable(labels).to(device)
 
 
 def calculate_accuracy(net, loader, is_gpu):
@@ -311,7 +309,7 @@ def train(net, criterion, optimizer, trainloader,
             optimizer.step()
 
             # print statistics
-            running_loss += loss.data[0]
+            running_loss += loss.data
 
         # Normalizing the loss by the total number of train batches
         running_loss /= len(trainloader)
@@ -434,10 +432,6 @@ def main():
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
 
-    # Load CIFAR100
-    trainloader, testloader = data_loader(args.dataroot,
-                                          args.batch_size_train,
-                                          args.batch_size_test)
 
     # training
     train(net,
