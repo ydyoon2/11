@@ -437,8 +437,8 @@ def main():
     train(net,
           criterion,
           optimizer,
-          trainloader,
-          testloader,
+          train_loader,
+          val_loader,
           start_epoch,
           args.epochs,
           args.is_gpu)
