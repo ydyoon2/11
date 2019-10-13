@@ -39,6 +39,7 @@ def create_val_folder(val_dir):
             os.rename(os.path.join(path, img), os.path.join(newpath, img))
     return
 
+
 transform_train = transforms.Compose([transforms.RandomCrop(size=32, padding=4),
                                       transforms.RandomVerticalFlip(),
                                       transforms.RandomHorizontalFlip(),
@@ -49,22 +50,16 @@ transform_test = transforms.Compose([transforms.ToTensor(),
 
 train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train'
 train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
-#print(train_dataset.class_to_idx)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=8)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=8)
+
 val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/'
-
-
 if 'val_' in os.listdir(val_dir+'images/')[0]:
     create_val_folder(val_dir)
     val_dir = val_dir+'images/'
 else:
     val_dir = val_dir+'images/'
-
-
 val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
-# To check the index for each classes
-# print(val_dataset.class_to_idx)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=8)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=8)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 for images, labels in train_loader:
