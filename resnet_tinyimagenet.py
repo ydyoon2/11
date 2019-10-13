@@ -58,7 +58,7 @@ if 'val_' in os.listdir(val_dir+'images/')[0]:
     val_dir = val_dir+'images/'
 else:
     val_dir = val_dir+'images/'
-val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
+val_dataset = datasets.ImageFolder(val_dir, transform=transform_test
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=8)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
