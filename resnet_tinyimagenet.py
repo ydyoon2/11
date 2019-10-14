@@ -9,12 +9,6 @@ import torch.backends.cudnn as cudnn
 import torch.utils.data
 from torch.autograd import Variable
 
-
-
-
-num_epochs = 1
-batch_size = 128
-
 transform_train = transforms.Compose([
     transforms.RandomCrop(64, padding=4),
     transforms.RandomHorizontalFlip(),
@@ -54,7 +48,7 @@ train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train/'
 train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
 # To check the index for each classes
 # print(train_dataset.class_to_idx)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=8)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=8)
 # Your own directory to the validation folder of tiyimagenet
 val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/'
 
@@ -69,8 +63,16 @@ else:
 val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
 # To check the index for each classes
 # print(val_dataset.class_to_idx)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=8)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=128, shuffle=False, num_workers=8)
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+for images, labels in train_loader:
+    images = Variable(images).to(device)
+    labels = Variable(labels).to(device)
+for images, labels in val_loader:
+    images = Variable(images).to(device)
+    labels = Variable(labels).to(device)
+    
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 for images, labels in train_loader:
     images = Variable(images).to(device)
@@ -220,7 +222,3 @@ cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
 train(resnet, criterion, optimizer, train_loader, val_loader, 50)
-
-
-
-
