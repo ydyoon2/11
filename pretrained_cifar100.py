@@ -1,4 +1,3 @@
-import os
 import torch
 import torchvision
 import torch.nn as nn
@@ -9,14 +8,11 @@ import torch.optim
 import torch.backends.cudnn as cudnn
 import argparse
 
-def resnet18(model_urls, pretrained=True):
-    """Load pre-trained ResNet-18 model in Pytorch."""
+def resnet18(pretrained=True): 
     model = torchvision.models.resnet.ResNet(
-        torchvision.models.resnet.BasicBlock, [2, 2, 2, 2])
-
+            torchvision.models.resnet.BasicBlock, [2, 2, 2, 2])
     if pretrained:
-        model.load_state_dict(torch.utils.model_zoo.load_url(
-            model_urls, model_dir='../'))
+        model.load_state_dict(torch.utils.model_zoo.load_url(torch.utils.model_urls['resnet18'],model_dir='./'))
         model = FineTune(model, num_classes=100)
     return model
 
