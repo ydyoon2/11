@@ -197,7 +197,7 @@ class ResNet(nn.Module):
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.dropout = nn.Dropout2d(p=0.3)
+        self.dropout = nn.Dropout2d(p=0.05)
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
                                        dilate=replace_stride_with_dilation[0])
@@ -311,7 +311,7 @@ resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
 resnet = torch.nn.DataParallel(resnet).cuda()
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(resnet.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
+optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, momentum=0.9, weight_decay=1e-5)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, 50)
 
