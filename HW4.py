@@ -111,10 +111,10 @@ class ResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.2)
 
-        self.conv2_x = self._make_block(basic_block, num_blocks[0], out_channels=64, stride=1, padding=1)
-        self.conv3_x = self._make_block(basic_block, num_blocks[1], out_channels=128, stride=2, padding=1)
+        self.conv2_x = self._make_block(basic_block, num_blocks[0], out_channels=128, stride=1, padding=1)
+        self.conv3_x = self._make_block(basic_block, num_blocks[1], out_channels=256, stride=2, padding=1)
         self.conv4_x = self._make_block(basic_block, num_blocks[2], out_channels=256, stride=2, padding=1)
-        self.conv5_x = self._make_block(basic_block, num_blocks[3], out_channels=512, stride=2, padding=1)
+        self.conv5_x = self._make_block(basic_block, num_blocks[3], out_channels=12800, stride=2, padding=1)
 
         self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
         #self.maxpool_2 = nn.MaxPool2d(kernel_size=5, stride=1)
@@ -158,7 +158,7 @@ class ResNet(nn.Module):
         out = self.conv5_x(out)
 
         out = self.maxpool(out)
-        out = self.maxpool_2(out)
+        
         out = out.view(out.size(0), -1)
         out = self.fc_layer(out)
 
