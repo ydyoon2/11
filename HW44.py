@@ -286,9 +286,10 @@ def accuracy(net, loader):
 
     return 100 * correct / total
 
-def train(resnet, criterion, optimizer, train_loader, val_loader, epochs):
+def train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, epochs):
     for epoch in range(epochs):
         running_loss = 0.0
+        scheduler.step()
         for i, data in enumerate(train_loader, 0):
             inputs, labels = data
             inputs = inputs.cuda()
@@ -310,8 +311,9 @@ resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
 resnet = torch.nn.DataParallel(resnet).cuda()
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=0.001)
-train(resnet, criterion, optimizer, train_loader, val_loader, 50)
+optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-5)
+scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, 50)
 
 
 
