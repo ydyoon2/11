@@ -255,15 +255,15 @@ class ResNet(nn.Module):
         out = self.relu(out)
         out = self.dropout(out)
 
-        out = self.conv2_x(out)
-        out = self.conv3_x(out)
-        out = self.conv4_x(out)
-        out = self.conv5_x(out)
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
 
         out = self.maxpool(out)
         out = self.avgpool(out)
         out = out.view(out.size(0), -1)
-        out = self.fc_layer(out)
+        out = self.fc(out)
 
         return out
 
