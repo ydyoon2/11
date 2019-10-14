@@ -40,13 +40,16 @@ def create_val_folder(val_dir):
     return
 
 
-transform_train = transforms.Compose([transforms.RandomCrop(size=64),
+transform_train = transforms.Compose([transforms.RandomCrop(size=64, padding=4),
                                       transforms.RandomVerticalFlip(),
                                       transforms.RandomHorizontalFlip(),
-                                      transforms.ToTensor(), 
-                                      transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
-transform_test = transforms.Compose([transforms.ToTensor(), 
-                                     transforms.Normalize((0.4914, 0.48216, 0.44653), (0.24703, 0.24349, 0.26159))])
+                                      transforms.ToTensor() 
+                                      ])
+transform_test = transforms.Compose([transforms.ToTensor(),
+                                     transforms.RandomVerticalFlip(),
+                                     transforms.RandomHorizontalFlip(),
+                                     transforms.ToTensor() 
+                                     ])
 
 train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train'
 train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
@@ -209,5 +212,5 @@ resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
 resnet = torch.nn.DataParallel(resnet).cuda()
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, weight_decay=0.001)
+optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
 train(resnet, criterion, optimizer, train_loader, val_loader, 50)
