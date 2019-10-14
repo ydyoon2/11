@@ -1,13 +1,3 @@
-"""
-HW4: Implement a deep residual neural network for CIFAR100.
-
-Part-2: Fine-tune a pre-trained ResNet-18
-
-Due October 10 at 5:00 PM.
-
-@author: Zhenye Na
-"""
-
 import os
 import torch
 import torchvision
@@ -123,7 +113,7 @@ def train_model(net, optimizer, scheduler, criterion, trainloader,
         criterion: CrossEntropyLoss
         trainloader: training set loader
         testloader: test set loader
-        start_epoch: checkpoint saved epoch
+
         epochs: training epochs
         is_gpu: whether use GPU
 
@@ -170,17 +160,6 @@ def train_model(net, optimizer, scheduler, criterion, trainloader,
         print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(
             epoch+1, running_loss, train_accuracy, test_accuracy))
 
-        # save model
-        if epoch % 50 == 0:
-            print('==> Saving model ...')
-            state = {
-                'net': net.module if is_gpu else net,
-                'epoch': epoch,
-            }
-            if not os.path.isdir('../checkpoint'):
-                os.mkdir('../checkpoint')
-            torch.save(state, '../checkpoint/ckpt.t7')
-
     print('==> Finished Training ...')
 
 
@@ -222,8 +201,7 @@ parser = argparse.ArgumentParser()
 # directory
 parser.add_argument('--dataroot', type=str,
                     default="../data", help='path to dataset')
-parser.add_argument('--ckptroot', type=str,
-                    default="../checkpoint/ckpt.t7", help='path to checkpoint')
+
 
 # hyperparameters settings
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
@@ -254,19 +232,10 @@ def main():
     """Main pipeline for training ResNet model on CIFAR100 Dataset."""
     start_epoch = 0
 
-    # resume training from the last time
-    if args.resume:
-        # Load checkpoint
-        print('==> Resuming from checkpoint ...')
-        assert os.path.isdir(
-            '../checkpoint'), 'Error: no checkpoint directory found!'
-        checkpoint = torch.load(args.ckptroot)
-        net = checkpoint['net']
-        start_epoch = checkpoint['epoch']
-    else:
+
         # start over
-        print('==> Load pre-trained ResNet model ...')
-        net = resnet18(args.model_url)
+    print('==> Load pre-trained ResNet model ...')
+    net = resnet18(args.model_url)
 
     # For training on GPU, we need to transfer net and data onto the GPU
     # http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
