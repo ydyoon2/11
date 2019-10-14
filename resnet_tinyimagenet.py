@@ -40,7 +40,7 @@ def create_val_folder(val_dir):
     return
 
 
-transform_train = transforms.Compose([transforms.RandomCrop(size=64, padding=4),
+transform_train = transforms.Compose([transforms.RandomCrop(size=64),
                                       transforms.RandomVerticalFlip(),
                                       transforms.RandomHorizontalFlip(),
                                       transforms.ToTensor(), 
@@ -58,7 +58,7 @@ if 'val_' in os.listdir(val_dir+'images/')[0]:
     val_dir = val_dir+'images/'
 else:
     val_dir = val_dir+'images/'
-val_dataset = datasets.ImageFolder(val_dir, transform=transform_test
+val_dataset = datasets.ImageFolder(val_dir, transform=transform_test)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=8)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -209,5 +209,5 @@ resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
 resnet = torch.nn.DataParallel(resnet).cuda()
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, momentum=0.9, weight_decay=0.001)
+optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, weight_decay=0.001)
 train(resnet, criterion, optimizer, train_loader, val_loader, 50)
