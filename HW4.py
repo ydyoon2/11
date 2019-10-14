@@ -1,16 +1,11 @@
 import torch
 import torch.utils.data
+import torchvision
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import os
-import torch.optim
 import torch.nn as nn
-import torch.backends.cudnn as cudnn
-import torch.utils.data
 from torch.autograd import Variable
-
-
-
 
 num_epochs = 1
 batch_size = 128
@@ -54,7 +49,7 @@ train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train/'
 train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
 # To check the index for each classes
 # print(train_dataset.class_to_idx)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=8)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
 # Your own directory to the validation folder of tiyimagenet
 val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/'
 
@@ -69,15 +64,11 @@ else:
 val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
 # To check the index for each classes
 # print(val_dataset.class_to_idx)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=8)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-for images, labels in train_loader:
-    images = Variable(images).to(device)
-    labels = Variable(labels).to(device)
-for images, labels in val_loader:
-    images = Variable(images).to(device)
-    labels = Variable(labels).to(device)
+
+# YOUR CODE GOES HERE
+# Change to your ResNet 
 
 # BasicBlock
 class BasicBlock(nn.Module):
@@ -194,33 +185,31 @@ def accuracy(net, loader):
 
     return 100 * correct / total
 
-def train(resnet, criterion, optimizer, train_loader, val_loader, epochs):
-    for epoch in range(epochs):
-        running_loss = 0.0
-        for i, data in enumerate(train_loader, 0):
-            inputs, labels = data
-            inputs = inputs.cuda()
-            labels = labels.cuda()
-            inputs, labels = Variable(inputs), Variable(labels)
-            optimizer.zero_grad()
-            outputs = resnet(inputs)
-            _, preds = torch.max(outputs, 1)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.data
-        running_loss /= len(train_loader)
-        train_accuracy = accuracy(resnet, train_loader)
-        test_accuracy = accuracy(resnet, val_loader)
-        print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
+
+
+
+
+
+
 
 resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
-resnet = torch.nn.DataParallel(resnet).cuda()
-cudnn.benchmark = True
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(resnet.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0005)
-train(resnet, criterion, optimizer, train_loader, val_loader, 50)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+for epoch in range(num_epochs):
+    # Train the model
+    resnet.train()
+    for batch_idx, (X_train_batch, Y_train_batch) in enumerate(train_loader):
+        X_train_batch,Y_train_batch = X_train_batch.to(device),Y_train_batch.to(device)
+       
+       
+    # Test the model
+    with torch.no_grad():
+        resnet.eval()
+        for batch_idx, (X_test_batch, Y_test_batch) in enumerate(val_loader):
+            X_test_batch, Y_test_batch= X_test_batch.to(device),Y_test_batch.to(device)
 
+    train_accuracy = accuracy(resnet, train_loader)
+    test_accuracy = accuracy(resnet, val_loader)
+    print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
 
