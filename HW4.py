@@ -212,5 +212,5 @@ resnet = torch.nn.DataParallel(resnet).cuda()
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, gamma=0.9)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 1, gamma=0.95)
 train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, 50)
