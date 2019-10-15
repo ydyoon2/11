@@ -1,29 +1,37 @@
 import torch
-import torch.optim
+import torch.utils.data
+import torchvision
+import torchvision.transforms as transforms
+import torchvision.datasets as datasets
+import os
+from torch.autograd import Variable
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
-import torchvision.transforms as transforms
-import torch.utils.data
-from torch.autograd import Variable
-import os
-import torchvision.datasets as datasets
 
-# TinyImageNet
+
+num_epochs = 1
+batch_size = 128
+
+transform_train = transforms.Compose([
+    transforms.RandomCrop(64, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+])
+
+transform_val = transforms.Compose([
+    transforms.ToTensor(),
+])
+
 def create_val_folder(val_dir):
     """
-    This method is responsible for separating validation
-    images into separate sub folders
+    This method is responsible for separating validation images into separate sub folders
     """
-    # path where validation data is present now
-    path = os.path.join(val_dir, 'images')
-    # file where image2class mapping is present
-    filename = os.path.join(val_dir, 'val_annotations.txt')
-    fp = open(filename, "r") # open file in read mode
-    data = fp.readlines() # read line by line
-    """
-    Create a dictionary with image names as key and
-    corresponding classes as values
-    """
+    path = os.path.join(val_dir, 'images')  # path where validation data is present now
+    filename = os.path.join(val_dir, 'val_annotations.txt')  # file where image2class mapping is present
+    fp = open(filename, "r")  # open file in read mode
+    data = fp.readlines()  # read line by line
+
+    # Create a dictionary with image names as key and corresponding classes as values
     val_img_dict = {}
     for line in data:
         words = line.split("\t")
@@ -32,34 +40,37 @@ def create_val_folder(val_dir):
     # Create folder if not present, and move image into proper folder
     for img, folder in val_img_dict.items():
         newpath = (os.path.join(path, folder))
-        if not os.path.exists(newpath): # check if folder exists
+        if not os.path.exists(newpath):  # check if folder exists
             os.makedirs(newpath)
-        # Check if image exists in default directory
-        if os.path.exists(os.path.join(path, img)):
+        if os.path.exists(os.path.join(path, img)):  # Check if image exists in default directory
             os.rename(os.path.join(path, img), os.path.join(newpath, img))
     return
 
-
-transform_train = transforms.Compose([transforms.RandomCrop(size=64, padding=4),
-                                      transforms.RandomVerticalFlip(),
-                                      transforms.RandomHorizontalFlip(),
-                                      transforms.ToTensor() 
-                                      ])
-transform_test = transforms.Compose([transforms.ToTensor()])
-
-train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train'
+# Your own directory to the train folder of tiyimagenet
+train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train/'
 train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=8)
-
+# To check the index for each classes
+# print(train_dataset.class_to_idx)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
+# Your own directory to the validation folder of tiyimagenet
 val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/'
+
+
 if 'val_' in os.listdir(val_dir+'images/')[0]:
     create_val_folder(val_dir)
     val_dir = val_dir+'images/'
 else:
     val_dir = val_dir+'images/'
-val_dataset = datasets.ImageFolder(val_dir, transform=transform_test)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=8)
 
+
+val_dataset = datasets.ImageFolder(val_dir, transform=transforms.ToTensor())
+# To check the index for each classes
+# print(val_dataset.class_to_idx)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
+
+
+# YOUR CODE GOES HERE
+# Change to your ResNet 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 for images, labels in train_loader:
     images = Variable(images).to(device)
@@ -67,7 +78,6 @@ for images, labels in train_loader:
 for images, labels in val_loader:
     images = Variable(images).to(device)
     labels = Variable(labels).to(device)
-    
 
 # BasicBlock
 class BasicBlock(nn.Module):
@@ -110,6 +120,7 @@ class ResNet(nn.Module):
         self.bn = nn.BatchNorm2d(num_features=64)
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.1)
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
 
         self.conv2_x = self._make_block(basic_block, num_blocks[0], out_channels=64, stride=1, padding=1)
         self.conv3_x = self._make_block(basic_block, num_blocks[1], out_channels=128, stride=2, padding=1)
@@ -160,8 +171,8 @@ class ResNet(nn.Module):
 
         out = self.maxpool(out)
         out = self.avgpool(out)
-        out = self.dropout(out)
         out = out.view(out.size(0), -1)
+        out = self.dropout(out)
         out = self.fc_layer(out)
 
         return out
@@ -208,9 +219,17 @@ def train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, epo
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
 resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
-resnet = torch.nn.DataParallel(resnet).cuda()
+resnet = torch.nn.DataParallel(resnet, device_ids=range(torch.cuda.device_count()))
 cudnn.benchmark = True
+
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, 50)
+
+
+
+
+
+
+
