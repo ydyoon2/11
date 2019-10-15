@@ -203,9 +203,7 @@ class FineTune(nn.Module):
 
 parser = argparse.ArgumentParser()
 
-# directory
-parser.add_argument('--dataroot', type=str,
-                    default="../data", help='path to dataset')
+
 
 
 # hyperparameters settings
