@@ -6,6 +6,7 @@ import torchvision.datasets as datasets
 import os
 from torch.autograd import Variable
 import torch.nn as nn
+import torch.backends.cudnn as cudnn
 
 
 num_epochs = 1
@@ -216,7 +217,8 @@ def train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, epo
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
 resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
-resnet = nn.Module()
+resnet = torch.nn.DataParallel(resnet, device_ids=range(torch.cuda.device_count()))
+cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005)
