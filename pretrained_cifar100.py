@@ -105,6 +105,13 @@ def train_model(net, optimizer, scheduler, criterion, trainloader, testloader, s
             outputs = net(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
+            if(EPOCH>6):
+                for group in optimizer.param_groups:
+                    for p in group['params']:
+                        state = optimizer.state[p]
+                        if 'step' in state.keys():
+                            if(state['step']>=1024):
+                                state['step'] = 1000
             optimizer.step()
             running_loss += loss.data
         running_loss /= len(trainloader)
@@ -138,7 +145,7 @@ net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=0.001, weight_decay=0.00005)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=5, gamma=0.2)
+scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 trainloader, testloader = data_loader('~/scratch/', 64, 64)
-train_model(net, optimizer, scheduler, criterion, trainloader, testloader, start_epoch, 10)
+train_model(net, optimizer, scheduler, criterion, trainloader, testloader, start_epoch, 20)
 
