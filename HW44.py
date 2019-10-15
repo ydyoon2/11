@@ -165,6 +165,7 @@ def conv3x3(in_channels, out_channels, stride=1):
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = ResNet(BasicBlock, [2, 4, 4, 2], 200)
+model.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr = 0.001)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=5, gamma=0.2)
@@ -185,7 +186,7 @@ for epoch in range(50):
     correct = 0
     total = 0
     for images, labels in train_loader:
-        images = images.reshape(64, 3, 3, 3).to(device)
+        images = images.to(device)
         labels = labels.to(device)
         
         outputs = model(images)
@@ -202,7 +203,7 @@ for epoch in range(50):
         correct = 0
         total = 0
         for images, labels in val_loader:
-            images = images.reshape(64, 3, 3, 3).to(device)
+            images = images.to(device)
             labels = labels.to(device)
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
