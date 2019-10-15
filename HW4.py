@@ -7,6 +7,7 @@ import torch.utils.data
 from torch.autograd import Variable
 import os
 import torchvision.datasets as datasets
+import time
 
 # TinyImageNet
 def create_val_folder(val_dir):
@@ -60,14 +61,6 @@ else:
 val_dataset = datasets.ImageFolder(val_dir, transform=transform_test)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=8)
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-for images, labels in train_loader:
-    images = Variable(images).to(device)
-    labels = Variable(labels).to(device)
-for images, labels in val_loader:
-    images = Variable(images).to(device)
-    labels = Variable(labels).to(device)
-    
 
 # BasicBlock
 class BasicBlock(nn.Module):
@@ -169,48 +162,123 @@ class ResNet(nn.Module):
 def conv3x3(in_channels, out_channels, stride=1):
     return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
 
-def accuracy(resnet, loader):
-    correct = 0.
-    total = 0.
 
-    for data in loader:
-        images, labels = data
-        
-        images = images.cuda()
-        labels = labels.cuda()
-        outputs = resnet(Variable(images))
-        _, predicted = torch.max(outputs.data, 1)
-
-        total += labels.size(0)
-        correct += (predicted == labels).sum()
-
-    return 100 * correct / total
-
-def train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, epochs):
-    for epoch in range(epochs):
-        scheduler.step()
-        running_loss = 0.0
-        for i, data in enumerate(train_loader, 0):
-            inputs, labels = data
-            inputs = inputs.cuda()
-            labels = labels.cuda()
-            inputs, labels = Variable(inputs), Variable(labels)
-            optimizer.zero_grad()
-            outputs = resnet(inputs)
-            _, preds = torch.max(outputs, 1)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.data
-        running_loss /= len(train_loader)
-        train_accuracy = accuracy(resnet, train_loader)
-        test_accuracy = accuracy(resnet, val_loader)
-        print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
-
-resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
-resnet = torch.nn.DataParallel(resnet).cuda()
-cudnn.benchmark = True
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = ResNet(BasicBlock, [2, 4, 4, 2], 200)
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 1, gamma=0.95)
-train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, 50)
+optimizer = torch.optim.SGD(model.parameters(), lr = 0.001)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=5, gamma=0.2)
+
+
+#for images, labels in train_loader:
+#    images = Variable(images).to(device)
+#    labels = Variable(labels).to(device)
+#for images, labels in val_loader:
+#    images = Variable(images).to(device)
+#    labels = Variable(labels).to(device)
+
+total_step = len(train_loader)
+start_time = time.time()
+
+for epoch in range(50):
+    scheduler.step()
+    correct = 0
+    total = 0
+    for images, labels in train_loader:
+        images = images.reshape(-1, 64*64).to(device)
+        labels = labels.to(device)
+        
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    train_accuracy = correct/total
+    with torch.no_grad():
+        correct = 0
+        total = 0
+        for images, labels in val_loader:
+            images = images.reshape(-1, 64*64).to(device)
+            labels = labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    test_accuracy = correct/total
+    print('Epoch {}, Loss: {:.4f}, Train Accuracy: {:.4f}, Test Accuracy: {:.4f}'
+          .format(epoch, loss.item(), train_accuracy, test_accuracy))
+    torch.save(model.state_dict(), 'epoch-{}.ckpt'.format(epoch))
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#def accuracy(resnet, loader):
+#    correct = 0.
+#    total = 0.
+#
+#    for data in loader:
+#        images, labels = data
+#        
+#        images = images.cuda()
+#        labels = labels.cuda()
+#        outputs = resnet(Variable(images))
+#        _, predicted = torch.max(outputs.data, 1)
+#
+#        total += labels.size(0)
+#        correct += (predicted == labels).sum()
+#
+#    return 100 * correct / total
+#
+#def train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, epochs):
+#    for epoch in range(epochs):
+#        scheduler.step()
+#        running_loss = 0.0
+#        for i, data in enumerate(train_loader, 0):
+#            inputs, labels = data
+#            inputs = inputs.cuda()
+#            labels = labels.cuda()
+#            inputs, labels = Variable(inputs), Variable(labels)
+#            optimizer.zero_grad()
+#            outputs = resnet(inputs)
+#            _, preds = torch.max(outputs, 1)
+#            loss = criterion(outputs, labels)
+#            loss.backward()
+#            optimizer.step()
+#            running_loss += loss.data
+#        running_loss /= len(train_loader)
+#        train_accuracy = accuracy(resnet, train_loader)
+#        test_accuracy = accuracy(resnet, val_loader)
+#        print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
+#
+#resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
+#resnet = torch.nn.DataParallel(resnet).cuda()
+#cudnn.benchmark = True
+#criterion = nn.CrossEntropyLoss()
+#optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005)
+#scheduler = torch.optim.lr_scheduler.StepLR(optimizer, gamma=0.9)
+#train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, 50)
