@@ -185,7 +185,7 @@ for epoch in range(50):
     correct = 0
     total = 0
     for images, labels in train_loader:
-        images = images.reshape(-1, 64*64).to(device)
+        images = images.to(device)
         labels = labels.to(device)
         
         outputs = model(images)
@@ -202,7 +202,7 @@ for epoch in range(50):
         correct = 0
         total = 0
         for images, labels in val_loader:
-            images = images.reshape(-1, 64*64).to(device)
+            images = images.to(device)
             labels = labels.to(device)
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
