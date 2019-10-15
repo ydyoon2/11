@@ -105,7 +105,7 @@ def train_model(net, optimizer, scheduler, criterion, trainloader, testloader, s
             outputs = net(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
-            if(EPOCH>6):
+            if(epoch>6):
                 for group in optimizer.param_groups:
                     for p in group['params']:
                         state = optimizer.state[p]
