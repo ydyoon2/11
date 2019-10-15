@@ -6,10 +6,11 @@ import torchvision.datasets as datasets
 import os
 from torch.autograd import Variable
 import torch.nn as nn
+import torch.backends.cudnn as cudnn
 
 
 num_epochs = 1
-batch_size = 128
+batch_size = 64
 
 transform_train = transforms.Compose([
     transforms.RandomCrop(64, padding=4),
@@ -119,6 +120,7 @@ class ResNet(nn.Module):
         self.bn = nn.BatchNorm2d(num_features=64)
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout2d(p=0.1)
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
 
         self.conv2_x = self._make_block(basic_block, num_blocks[0], out_channels=64, stride=1, padding=1)
         self.conv3_x = self._make_block(basic_block, num_blocks[1], out_channels=128, stride=2, padding=1)
@@ -168,6 +170,7 @@ class ResNet(nn.Module):
         out = self.conv5_x(out)
 
         out = self.maxpool(out)
+        out = self.avgpool(out)
         out = out.view(out.size(0), -1)
         out = self.dropout(out)
         out = self.fc_layer(out)
@@ -216,7 +219,8 @@ def train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, epo
         print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
 
 resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
-resnet = nn.Module(resnet)
+resnet = torch.nn.DataParallel(resnet, device_ids=range(torch.cuda.device_count()))
+cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005)
