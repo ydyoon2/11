@@ -1,284 +1,278 @@
 import torch
-import torch.optim
+import torchvision
 import torch.nn as nn
-import torch.backends.cudnn as cudnn
-import torchvision.transforms as transforms
 import torch.utils.data
+import torchvision.transforms as transforms
 from torch.autograd import Variable
-import os
-import torchvision.datasets as datasets
-import time
+import torch.optim
+import torch.backends.cudnn as cudnn
+import argparse
+import torch.utils.model_zoo as model_zoo
 
-# TinyImageNet
-def create_val_folder(val_dir):
+model_urls = {
+    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
+    'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
+    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
+    'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
+    'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
+}
+# Loading the data
+
+def resnet18(pretrained=True):
+    model = torchvision.models.resnet.ResNet(torchvision.models.resnet.BasicBlock, [2, 2, 2, 2])
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['resnet18'],model_dir='~/scratch/'))
+        model = FineTune(model, num_classes=100)
+    return model
+
+
+def data_loader(dataroot, batch_size_train, batch_size_test):
     """
-    This method is responsible for separating validation
-    images into separate sub folders
+    Data Loader for CIFAR100 Dataset.
+
+    Args:
+        dataroot: data root directory
+        batch_size_train: mini-Batch size of training set
+        batch_size_test: mini-Batch size of test set
+
+    Returns:
+        trainloader: training set loader
+        testloader: test set loader
+        classes: classes names
     """
-    # path where validation data is present now
-    path = os.path.join(val_dir, 'images')
-    # file where image2class mapping is present
-    filename = os.path.join(val_dir, 'val_annotations.txt')
-    fp = open(filename, "r") # open file in read mode
-    data = fp.readlines() # read line by line
+    # Data Augmentation
+    print("==> Data Augmentation ...")
+
+    # Normalize training set together with augmentation
+    transform_train = transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+    # Normalize test set same as training set without augmentation
+    transform_test = transforms.Compose([
+        transforms.Resize(224),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+    # Loading CIFAR100
+    print("==> Preparing CIFAR100 dataset ...")
+
+    trainset = torchvision.datasets.CIFAR100(root=dataroot,
+                                             train=True,
+                                             download=True,
+                                             transform=transform_train)
+    trainloader = torch.utils.data.DataLoader(
+        trainset, batch_size=batch_size_train, shuffle=True, num_workers=4)
+
+    testset = torchvision.datasets.CIFAR100(root=dataroot,
+                                            train=False,
+                                            download=True,
+                                            transform=transform_test)
+    testloader = torch.utils.data.DataLoader(
+        testset, batch_size=batch_size_test, shuffle=False, num_workers=4)
+
+    return trainloader, testloader
+
+
+def calculate_accuracy(net, loader, is_gpu):
     """
-    Create a dictionary with image names as key and
-    corresponding classes as values
+    Calculate accuracy.
+
+    Args:
+        loader (torch.utils.data.DataLoader): training / test set loader
+        is_gpu (bool): whether to run on GPU
+
+    Returns:
+        tuple: overall accuracy
     """
-    val_img_dict = {}
-    for line in data:
-        words = line.split("\t")
-        val_img_dict[words[0]] = words[1]
-    fp.close()
-    # Create folder if not present, and move image into proper folder
-    for img, folder in val_img_dict.items():
-        newpath = (os.path.join(path, folder))
-        if not os.path.exists(newpath): # check if folder exists
-            os.makedirs(newpath)
-        # Check if image exists in default directory
-        if os.path.exists(os.path.join(path, img)):
-            os.rename(os.path.join(path, img), os.path.join(newpath, img))
-    return
+    correct = 0.
+    total = 0.
 
-
-transform_train = transforms.Compose([transforms.RandomCrop(size=64, padding=4),
-                                      transforms.RandomVerticalFlip(),
-                                      transforms.RandomHorizontalFlip(),
-                                      transforms.ToTensor() 
-                                      ])
-transform_test = transforms.Compose([transforms.ToTensor()])
-
-train_dir = '/u/training/tra318/scratch/tiny-imagenet-200/train'
-train_dataset = datasets.ImageFolder(train_dir, transform=transform_train)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=8)
-
-val_dir = '/u/training/tra318/scratch/tiny-imagenet-200/val/'
-if 'val_' in os.listdir(val_dir+'images/')[0]:
-    create_val_folder(val_dir)
-    val_dir = val_dir+'images/'
-else:
-    val_dir = val_dir+'images/'
-val_dataset = datasets.ImageFolder(val_dir, transform=transform_test)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=8)
-
-
-# BasicBlock
-class BasicBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1, downsample=None):
-        super(BasicBlock, self).__init__()
-
-        self.conv1 = conv3x3(in_channels, out_channels, stride)
-        self.bn1 = nn.BatchNorm2d(out_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(out_channels, out_channels)
-        self.bn2 = nn.BatchNorm2d(out_channels)
-
-        self.downsample = downsample
-        self.stride = stride
-
-    def forward(self, x):
-        identity = x
-
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-        out = self.conv2(out)
-        out = self.bn2(out)
-
-        if self.downsample is not None:
-            identity = self.downsample(x)
-
-        out += identity
-        out = self.relu(out)
-        
-        return out
-
-# ResNet
-class ResNet(nn.Module):
-    def __init__(self, basic_block, num_blocks, num_classes=200):
-        super(ResNet, self).__init__()
-
-        self.in_channels = 64
-        self.conv1 = conv3x3(in_channels=3, out_channels=64)
-        self.bn = nn.BatchNorm2d(num_features=64)
-        self.relu = nn.ReLU(inplace=True)
-        self.dropout = nn.Dropout2d(p=0.1)
-
-        self.conv2_x = self._make_block(basic_block, num_blocks[0], out_channels=64, stride=1, padding=1)
-        self.conv3_x = self._make_block(basic_block, num_blocks[1], out_channels=128, stride=2, padding=1)
-        self.conv4_x = self._make_block(basic_block, num_blocks[2], out_channels=256, stride=2, padding=1)
-        self.conv5_x = self._make_block(basic_block, num_blocks[3], out_channels=512, stride=2, padding=1)
-
-        self.maxpool = nn.MaxPool2d(kernel_size=4, stride=1)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        #self.maxpool_2 = nn.MaxPool2d(kernel_size=5, stride=1)
-        self.fc_layer = nn.Linear(512, num_classes)
-
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight.data, mode='fan_out')
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.Linear):
-                m.bias.data.zero_()
-
-    def _make_block(self, basic_block, num_blocks, out_channels, stride=1, padding = 1):
-        downsample = None
-        if (stride != 1) or (self.in_channels != out_channels):
-            downsample = nn.Sequential(
-                conv3x3(self.in_channels, out_channels, stride=stride),
-                nn.BatchNorm2d(num_features=out_channels)
-            )
-
-        layers = []
-        layers.append(
-            basic_block(self.in_channels, out_channels, stride, downsample))
-        self.in_channels = out_channels
-        for _ in range(1, num_blocks):
-            layers.append(basic_block(out_channels, out_channels))
-
-        return nn.Sequential(*layers)
-
-    def forward(self, x):
-        out = self.conv1(x)
-        out = self.bn(out)
-        out = self.relu(out)
-        out = self.dropout(out)
-
-        out = self.conv2_x(out)
-        out = self.conv3_x(out)
-        out = self.conv4_x(out)
-        out = self.conv5_x(out)
-
-        out = self.maxpool(out)
-        out = self.avgpool(out)
-        out = self.dropout(out)
-        out = out.view(out.size(0), -1)
-        out = self.fc_layer(out)
-
-        return out
-
-def conv3x3(in_channels, out_channels, stride=1):
-    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
-
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = ResNet(BasicBlock, [2, 4, 4, 2], 200)
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr = 0.001)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=5, gamma=0.2)
-
-
-#for images, labels in train_loader:
-#    images = Variable(images).to(device)
-#    labels = Variable(labels).to(device)
-#for images, labels in val_loader:
-#    images = Variable(images).to(device)
-#    labels = Variable(labels).to(device)
-
-total_step = len(train_loader)
-start_time = time.time()
-
-for epoch in range(50):
-    scheduler.step()
-    correct = 0
-    total = 0
-    for images, labels in train_loader:
-        images = images.to(device)
-        labels = labels.to(device)
-        
-        outputs = model(images)
-        loss = criterion(outputs, labels)
+    for data in loader:
+        images, labels = data
+        if is_gpu:
+            images = images.cuda()
+            labels = labels.cuda()
+        outputs = net(Variable(images))
         _, predicted = torch.max(outputs.data, 1)
+
         total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-        
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    train_accuracy = correct/total
-    with torch.no_grad():
-        correct = 0
-        total = 0
-        for images, labels in val_loader:
-            images = images.to(device)
-            labels = labels.to(device)
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    test_accuracy = correct/total
-    print('Epoch {}, Loss: {:.4f}, Train Accuracy: {:.4f}, Test Accuracy: {:.4f}'
-          .format(epoch, loss.item(), train_accuracy, test_accuracy))
-    torch.save(model.state_dict(), 'epoch-{}.ckpt'.format(epoch))
-    
-    
+        correct += (predicted == labels).sum()
+
+    return 100 * correct / total
+
+
+def train_model(net, optimizer, scheduler, criterion, trainloader,
+                testloader, start_epoch, epochs, is_gpu):
+    """
+    Training process.
+
+    Args:
+        net: ResNet model
+        optimizer: Adam optimizer
+        criterion: CrossEntropyLoss
+        trainloader: training set loader
+        testloader: test set loader
+
+        epochs: training epochs
+        is_gpu: whether use GPU
+
+    """
+    print("==> Start training ...")
+
+    # switch to train mode
+    net.train()
+
+    for epoch in range(start_epoch, epochs + start_epoch):
+
+        running_loss = 0.0
+        scheduler.step()
+
+        for i, data in enumerate(trainloader, 0):
+            # get the inputs
+            inputs, labels = data
+
+            if is_gpu:
+                inputs, labels = inputs.cuda(), labels.cuda()
+
+            # wrap them in Variable
+            inputs, labels = Variable(inputs), Variable(labels)
+
+            # zero the parameter gradients
+            optimizer.zero_grad()
+
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            # print statistics
+            running_loss += loss.data[0]
+
+        # Normalizing the loss by the total number of train batches
+        running_loss /= len(trainloader)
+
+        # Calculate training/test set accuracy of the existing model
+        train_accuracy = calculate_accuracy(net, trainloader, is_gpu)
+        test_accuracy = calculate_accuracy(net, testloader, is_gpu)
+
+        print("Iteration: {0} | Loss: {1} | Training accuracy: {2}% | Test accuracy: {3}%".format(
+            epoch+1, running_loss, train_accuracy, test_accuracy))
+
+    print('==> Finished Training ...')
 
 
 
 
 
 
+class FineTune(nn.Module):
+    """Fine-tune pre-trained ResNet model."""
+
+    def __init__(self, resnet, num_classes):
+        """Initialize Fine-tune ResNet model."""
+        super(FineTune, self).__init__()
+
+        # Everything except the last linear layer
+        self.features = nn.Sequential(*list(resnet.children())[:-1])
+        num_ftrs = resnet.fc.in_features
+        self.classifier = nn.Sequential(
+            nn.Linear(num_ftrs, num_classes)
+        )
+
+        # # Freeze those weights
+        # for param in self.features.parameters():
+        #     param.requires_grad = False
+
+    def forward(self, x):
+        """Forward pass of fint-tuned of ResNet-18 model."""
+        out = self.features(x)
+        out = out.view(out.size(0), -1)
+        out = self.classifier(out)
+        return out
 
 
 
 
 
+parser = argparse.ArgumentParser()
+
+# directory
+parser.add_argument('--dataroot', type=str,
+                    default='~/scratch/, help='path to dataset')
 
 
+# hyperparameters settings
+parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+parser.add_argument('--weight_decay', type=float,
+                    default=1e-5, help='weight decay (L2 penalty)')
+parser.add_argument('--epochs', type=int, default=500,
+                    help='number of epochs to train')
+parser.add_argument('--batch_size_train', type=int,
+                    default=64, help='training set input batch size')
+parser.add_argument('--batch_size_test', type=int,
+                    default=64, help='test set input batch size')
+
+# training settings
+parser.add_argument('--resume', type=bool, default=True,
+                    help='whether re-training from ckpt')
+parser.add_argument('--is_gpu', type=bool, default=True,
+                    help='whether training using GPU')
+
+# model_urls
+parser.add_argument('--model_url', type=str, default="https://download.pytorch.org/models/resnet18-5c106cde.pth",
+                    help='model url for pretrained model')
+
+# parse the arguments
+args = parser.parse_args()
 
 
+def main():
+    """Main pipeline for training ResNet model on CIFAR100 Dataset."""
+    start_epoch = 0
 
 
+        # start over
+    print('==> Load pre-trained ResNet model ...')
+    net = resnet18(args.model_url)
+
+    # For training on GPU, we need to transfer net and data onto the GPU
+    # http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
+    if args.is_gpu:
+        net = net.cuda()
+        net = torch.nn.DataParallel(
+            net, device_ids=range(torch.cuda.device_count()))
+        cudnn.benchmark = True
+
+    # Loss function, optimizer for fine-tune-able params
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(net.parameters(),
+                                 lr=args.lr,
+                                 weight_decay=args.weight_decay)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+
+    # data loader for CIFAR100
+    trainloader, testloader = data_loader(args.dataroot,
+                                          args.batch_size_train,
+                                          args.batch_size_test)
+
+    # train pre-trained model on CIFAR100
+    train_model(net,
+                optimizer,
+                scheduler,
+                criterion,
+                trainloader,
+                testloader,
+                start_epoch,
+                args.epochs,
+                args.is_gpu)
 
 
-
-
-
-
-#def accuracy(resnet, loader):
-#    correct = 0.
-#    total = 0.
-#
-#    for data in loader:
-#        images, labels = data
-#        
-#        images = images.cuda()
-#        labels = labels.cuda()
-#        outputs = resnet(Variable(images))
-#        _, predicted = torch.max(outputs.data, 1)
-#
-#        total += labels.size(0)
-#        correct += (predicted == labels).sum()
-#
-#    return 100 * correct / total
-#
-#def train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, epochs):
-#    for epoch in range(epochs):
-#        scheduler.step()
-#        running_loss = 0.0
-#        for i, data in enumerate(train_loader, 0):
-#            inputs, labels = data
-#            inputs = inputs.cuda()
-#            labels = labels.cuda()
-#            inputs, labels = Variable(inputs), Variable(labels)
-#            optimizer.zero_grad()
-#            outputs = resnet(inputs)
-#            _, preds = torch.max(outputs, 1)
-#            loss = criterion(outputs, labels)
-#            loss.backward()
-#            optimizer.step()
-#            running_loss += loss.data
-#        running_loss /= len(train_loader)
-#        train_accuracy = accuracy(resnet, train_loader)
-#        test_accuracy = accuracy(resnet, val_loader)
-#        print("epoch: {}, train_accuracy: {}%, test_accuracy: {}%".format(epoch, train_accuracy, test_accuracy))
-#
-#resnet = ResNet(BasicBlock, [2, 4, 4, 2], 200)
-#resnet = torch.nn.DataParallel(resnet).cuda()
-#cudnn.benchmark = True
-#criterion = nn.CrossEntropyLoss()
-#optimizer = torch.optim.SGD(resnet.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005)
-#scheduler = torch.optim.lr_scheduler.StepLR(optimizer, gamma=0.9)
-#train(resnet, criterion, optimizer, scheduler, train_loader, val_loader, 50)
+if __name__ == '__main__':
+    main()
