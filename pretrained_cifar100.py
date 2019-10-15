@@ -138,7 +138,7 @@ net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
 cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=0.001, weight_decay=0.00005)
-scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=5, gamma=0.2)
 trainloader, testloader = data_loader('~/scratch/', 64, 64)
-train_model(net, optimizer, scheduler, criterion, trainloader, testloader, start_epoch, 50)
+train_model(net, optimizer, scheduler, criterion, trainloader, testloader, start_epoch, 10)
 
